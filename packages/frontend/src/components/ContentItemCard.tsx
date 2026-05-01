@@ -1,6 +1,7 @@
 import React from "react";
 import { DurationLabel } from "./DurationLabel";
 import { BookmarkButton } from "./BookmarkButton";
+import { ShareButton } from "./ShareButton";
 import { VideoEmbed } from "./VideoEmbed";
 
 interface ContentItem {
@@ -17,6 +18,7 @@ interface ContentItem {
 
 interface ContentItemCardProps {
   item: ContentItem;
+  searchTerm?: string;
 }
 
 function timeAgo(dateStr: string): string {
@@ -35,7 +37,27 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-export function ContentItemCard({ item }: ContentItemCardProps) {
+function HighlightText({ text, term }: { text: string; term: string }) {
+  if (!term || term.length < 2) return <>{text}</>;
+
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escaped})`, "gi");
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="search-highlight">{part}</mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+export function ContentItemCard({ item, searchTerm = "" }: ContentItemCardProps) {
   return (
     <article className="usa-card" aria-label={item.title}>
       <div className="usa-card__container">
@@ -47,13 +69,13 @@ export function ContentItemCard({ item }: ContentItemCardProps) {
               rel="noopener noreferrer"
               className="usa-link"
             >
-              {item.title}
+              <HighlightText text={item.title} term={searchTerm} />
             </a>{" "}
             <DurationLabel label={item.durationLabel} />
           </h3>
         </div>
         <div className="usa-card__body">
-          <p>{item.summary}</p>
+          <p><HighlightText text={item.summary} term={searchTerm} /></p>
           <p className="text-base-dark font-sans-3xs">
             {item.sourceName} · {item.sourceCountry} · {item.contentType}
             {item.publicationDate && (
@@ -64,8 +86,9 @@ export function ContentItemCard({ item }: ContentItemCardProps) {
             <VideoEmbed sourceUrl={item.sourceUrl} title={item.title} />
           )}
         </div>
-        <div className="usa-card__footer">
+        <div className="usa-card__footer card-footer-actions">
           <BookmarkButton contentId={item.contentId} />
+          <ShareButton url={item.sourceUrl} title={item.title} />
         </div>
       </div>
     </article>

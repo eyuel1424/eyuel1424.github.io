@@ -205,13 +205,13 @@ function generateSummary(text: string): string {
   const words = text.trim().split(/\s+/);
   return words.length <= 200 ? words.join(" ") : words.slice(0, 200).join(" ") + "...";
 }
-function classifyTransferItem(title: string, summary: string): { isTransfer: true; transferType: string } | null {
-  const combined = `${title} ${summary}`.toLowerCase();
-  if (/\bloan\b/.test(combined)) return { isTransfer: true, transferType: "loan" };
-  if (/\bcontract\s+(extension|renewal|extended)\b/.test(combined)) return { isTransfer: true, transferType: "contract_extension" };
-  if (/\b(leav|depart|sold|released|exit)\b/.test(combined)) return { isTransfer: true, transferType: "departure" };
-  if (/\b(official|confirmed?|signed|signing|announce)\b/.test(combined)) return { isTransfer: true, transferType: "confirmed_signing" };
-  if (/\b(transfer|rumou?r|target|interest|bid|offer|link|chase|swoop)\b/.test(combined)) return { isTransfer: true, transferType: "rumor" };
+function classifyTransferItem(title: string, _summary: string): { isTransfer: true; transferType: string } | null {
+  const text = title.toLowerCase();
+  if (/\bloan\b/.test(text)) return { isTransfer: true, transferType: "loan" };
+  if (/\bcontract\s+(extension|renewal|extended)\b/.test(text)) return { isTransfer: true, transferType: "contract_extension" };
+  if (/\b(leav|depart|sold|released|exit)\b/.test(text)) return { isTransfer: true, transferType: "departure" };
+  if (/\b(official|confirmed?|signed|signing|announce)\b/.test(text)) return { isTransfer: true, transferType: "confirmed_signing" };
+  if (/\b(transfer|rumou?r|target|interest|bid|offer|link|chase|swoop)\b/.test(text)) return { isTransfer: true, transferType: "rumor" };
   return null;
 }
 
@@ -692,6 +692,225 @@ app.delete("/subscribe", (req, res) => {
   res.json({ success: true });
 });
 
+// ========== Recent Results ==========
+let recentResults: any[] = [];
+
+async function fetchRecentResults(apiKey: string) {
+  if (!apiKey) return;
+  try {
+    const res = await fetch("https://api.football-data.org/v4/teams/57/matches?status=FINISHED&limit=5", {
+      headers: { "X-Auth-Token": apiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return;
+    const data = await res.json() as any;
+    recentResults = (data.matches ?? []).map((m: any) => ({
+      matchId: String(m.id),
+      homeTeam: m.homeTeam.shortName ?? m.homeTeam.name,
+      awayTeam: m.awayTeam.shortName ?? m.awayTeam.name,
+      homeScore: m.score?.fullTime?.home ?? 0,
+      awayScore: m.score?.fullTime?.away ?? 0,
+      competition: m.competition.name,
+      matchDate: m.utcDate,
+      result: getArsenalResult(m),
+    }));
+    console.log(`[Data] Recent results updated: ${recentResults.length} matches`);
+  } catch (err) {
+    console.warn(`[Data] Recent results fetch failed: ${err instanceof Error ? err.message : err}`);
+  }
+}
+
+function getArsenalResult(m: any): "W" | "D" | "L" {
+  const homeScore = m.score?.fullTime?.home ?? 0;
+  const awayScore = m.score?.fullTime?.away ?? 0;
+  const isHome = (m.homeTeam.shortName ?? m.homeTeam.name) === "Arsenal" || m.homeTeam.id === 57;
+  if (homeScore === awayScore) return "D";
+  if (isHome) return homeScore > awayScore ? "W" : "L";
+  return awayScore > homeScore ? "W" : "L";
+}
+
+app.get("/recent-results", (_req, res) => {
+  res.json({ results: recentResults });
+});
+
+// ========== Top Scorers ==========
+let topScorers: any[] = [];
+
+async function fetchTopScorers(apiKey: string) {
+  if (!apiKey) return;
+  try {
+    const res = await fetch("https://api.football-data.org/v4/competitions/2021/scorers?limit=20", {
+      headers: { "X-Auth-Token": apiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return;
+    const data = await res.json() as any;
+    topScorers = (data.scorers ?? []).map((s: any) => ({
+      playerName: s.player.name,
+      teamName: s.team.shortName ?? s.team.name,
+      goals: s.goals ?? 0,
+      assists: s.assists ?? 0,
+      matchesPlayed: s.playedMatches ?? 0,
+      isArsenal: s.team.id === 57,
+    }));
+    console.log(`[Data] Top scorers updated: ${topScorers.length} players`);
+  } catch (err) {
+    console.warn(`[Data] Top scorers fetch failed: ${err instanceof Error ? err.message : err}`);
+  }
+}
+
+app.get("/top-scorers", (_req, res) => {
+  res.json({ scorers: topScorers });
+});
+
+app.get("/top-scorers/arsenal", (_req, res) => {
+  const arsenalScorers = topScorers.filter(s => s.isArsenal);
+  res.json({ scorers: arsenalScorers });
+});
+
+// ========== Injury Report ==========
+const injuryReport = [
+  { player: "Bukayo Saka", status: "Doubtful", detail: "Hamstring — being assessed ahead of next match", returnDate: "TBD" },
+  { player: "Mikel Merino", status: "Out", detail: "Stress fracture in right foot — sustained vs Man United in January", returnDate: "May 2026" },
+  { player: "Takehiro Tomiyasu", status: "Out", detail: "Knee ligament injury — long-term absence", returnDate: "Pre-season 2026-27" },
+  { player: "Gabriel", status: "Doubtful", detail: "Knock sustained vs Newcastle — late fitness test", returnDate: "Next match" },
+  { player: "Ben White", status: "Available", detail: "Returned to full training after minor calf issue", returnDate: "Available" },
+];
+
+app.get("/injuries", (_req, res) => {
+  res.json({ injuries: injuryReport });
+});
+
+// ========== Head-to-Head / Historical Context ==========
+app.get("/head-to-head/:opponent", (req, res) => {
+  const opponent = decodeURIComponent(req.params.opponent).toLowerCase();
+  const records: Record<string, any> = {
+    "newcastle": { opponent: "Newcastle", allTime: "W78 D42 L38", lastMeeting: "Arsenal 1-0 Newcastle (Apr 26, 2026)", arsenalWinPct: "49%", funFact: "Arsenal have won 5 of their last 6 home games against Newcastle." },
+    "atleti": { opponent: "Atletico Madrid", allTime: "W3 D2 L3", lastMeeting: "First leg TBD (Apr 29, 2026)", arsenalWinPct: "38%", funFact: "Arsenal were eliminated by Atletico in the 2017-18 Europa League semi-final. Time for revenge." },
+    "atletico madrid": { opponent: "Atletico Madrid", allTime: "W3 D2 L3", lastMeeting: "First leg TBD (Apr 29, 2026)", arsenalWinPct: "38%", funFact: "Arsenal were eliminated by Atletico in the 2017-18 Europa League semi-final. Time for revenge." },
+    "fulham": { opponent: "Fulham", allTime: "W55 D22 L14", lastMeeting: "Fulham 0-1 Arsenal (Mar 26, 2026)", arsenalWinPct: "60%", funFact: "Arsenal have lost just once to Fulham in the Premier League since 2001." },
+    "west ham": { opponent: "West Ham", allTime: "W68 D36 L40", lastMeeting: "West Ham 0-2 Arsenal (Dec 2025)", arsenalWinPct: "47%", funFact: "Arsenal have won their last 4 away matches at the London Stadium." },
+    "burnley": { opponent: "Burnley", allTime: "W52 D18 L16", lastMeeting: "Arsenal 3-0 Burnley (Jan 2026)", arsenalWinPct: "60%", funFact: "Arsenal are unbeaten in their last 12 Premier League meetings with Burnley." },
+    "crystal palace": { opponent: "Crystal Palace", allTime: "W42 D20 L18", lastMeeting: "Crystal Palace 0-1 Arsenal (Feb 2026)", arsenalWinPct: "53%", funFact: "Crystal Palace have not beaten Arsenal at Selhurst Park since 2017." },
+    "man city": { opponent: "Manchester City", allTime: "W55 D40 L48", lastMeeting: "Man City 2-1 Arsenal (Apr 19, 2026)", arsenalWinPct: "38%", funFact: "Arsenal have not won at the Etihad in the league since 2015." },
+    "manchester city": { opponent: "Manchester City", allTime: "W55 D40 L48", lastMeeting: "Man City 2-1 Arsenal (Apr 19, 2026)", arsenalWinPct: "38%", funFact: "Arsenal have not won at the Etihad in the league since 2015." },
+    "tottenham": { opponent: "Tottenham", allTime: "W84 D55 L65", lastMeeting: "Tottenham 1-4 Arsenal (Feb 22, 2026)", arsenalWinPct: "41%", funFact: "Arsenal have won 3 of their last 4 North London derbies. Spurs sit 18th this season." },
+    "bournemouth": { opponent: "Bournemouth", allTime: "W12 D4 L6", lastMeeting: "Arsenal 1-2 Bournemouth (Apr 12, 2026)", arsenalWinPct: "55%", funFact: "Bournemouth's win at the Emirates was their first ever away victory against Arsenal." },
+  };
+
+  const key = Object.keys(records).find(k => opponent.includes(k));
+  if (key) {
+    res.json(records[key]);
+  } else {
+    res.json({ opponent: req.params.opponent, allTime: "No data available", lastMeeting: "N/A", arsenalWinPct: "N/A", funFact: "Historical data not available for this opponent." });
+  }
+});
+
+// ========== Audio Summary (Kokoro TTS) ==========
+let ttsModel: any = null;
+let ttsLoading = false;
+let cachedAudioBuffer: Buffer | null = null;
+let cachedAudioDate = "";
+
+async function loadTTS() {
+  if (ttsModel) return ttsModel;
+  if (ttsLoading) return null;
+  ttsLoading = true;
+  try {
+    console.log("[TTS] Loading Kokoro model (first load downloads ~80MB)...");
+    const { KokoroTTS } = await import("kokoro-js");
+    ttsModel = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
+      dtype: "q8",
+      device: "cpu",
+    });
+    console.log("[TTS] Model loaded successfully");
+    return ttsModel;
+  } catch (err) {
+    console.error("[TTS] Failed to load model:", err instanceof Error ? err.message : err);
+    return null;
+  } finally {
+    ttsLoading = false;
+  }
+}
+
+function buildSummaryScript(): string {
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" });
+  const topItems = contentItems.slice(0, 5);
+  if (topItems.length === 0) return `Good morning Gooners. It's ${today}. No new Arsenal stories today. Check back later.`;
+
+  const headlines = topItems.map((item, i) => {
+    const title = item.title.replace(/&#\d+;/g, "").replace(/["""]/g, "");
+    return title;
+  });
+
+  const standing = sampleStandings.find(s => s.teamName.includes("Arsenal"));
+  const standingLine = standing
+    ? `Arsenal sit ${standing.position === 1 ? "top" : `${standing.position}${standing.position === 2 ? "nd" : standing.position === 3 ? "rd" : "th"}`} in the Premier League with ${standing.points} points from ${standing.matchesPlayed} games.`
+    : "";
+
+  const nextMatch = sampleSchedule[0];
+  const matchLine = nextMatch
+    ? `Next up, ${nextMatch.homeTeam} versus ${nextMatch.awayTeam} in the ${nextMatch.competition}.`
+    : "";
+
+  let script = `Good morning Gooners! It's ${today}. Here's your Arsenal news briefing. `;
+  script += headlines.slice(0, 3).join(". ") + ". ";
+  if (standingLine) script += standingLine + " ";
+  if (matchLine) script += matchLine + " ";
+  script += "That's your daily update. Come on you Gunners!";
+
+  // Keep under ~200 words for ~30 seconds
+  const words = script.split(/\s+/);
+  if (words.length > 200) {
+    script = words.slice(0, 200).join(" ") + ". That's your daily update. Come on you Gunners!";
+  }
+
+  return script;
+}
+
+app.get("/audio-summary", async (_req, res) => {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Return cached audio if generated today
+  if (cachedAudioBuffer && cachedAudioDate === today) {
+    res.setHeader("Content-Type", "audio/wav");
+    res.setHeader("Content-Disposition", `inline; filename="arsenal-briefing-${today}.wav"`);
+    return res.send(cachedAudioBuffer);
+  }
+
+  const tts = await loadTTS();
+  if (!tts) {
+    return res.status(503).json({ error: "TTS model is loading. Try again in a minute." });
+  }
+
+  try {
+    const script = buildSummaryScript();
+    console.log(`[TTS] Generating audio (${script.split(/\s+/).length} words)...`);
+
+    const audio = await tts.generate(script, { voice: "bf_emma" });
+
+    // Convert to WAV buffer
+    const { Blob } = await import("buffer");
+    const wavBlob = audio.toBlob();
+    const arrayBuffer = await wavBlob.arrayBuffer();
+    cachedAudioBuffer = Buffer.from(arrayBuffer);
+    cachedAudioDate = today;
+
+    console.log(`[TTS] Audio generated: ${(cachedAudioBuffer.length / 1024).toFixed(0)}KB`);
+
+    res.setHeader("Content-Type", "audio/wav");
+    res.setHeader("Content-Disposition", `inline; filename="arsenal-briefing-${today}.wav"`);
+    res.send(cachedAudioBuffer);
+  } catch (err) {
+    console.error("[TTS] Generation failed:", err instanceof Error ? err.message : err);
+    res.status(500).json({ error: "Audio generation failed" });
+  }
+});
+
+app.get("/audio-summary/script", (_req, res) => {
+  res.json({ script: buildSummaryScript() });
+});
+
 // ========== Start ==========
 const PORT = 3001;
 
@@ -798,7 +1017,11 @@ async function startServer() {
 
   // Run football data refresh once at startup, then on interval
   await refreshFootballData();
+  await fetchRecentResults(FOOTBALL_API_KEY);
+  await fetchTopScorers(FOOTBALL_API_KEY);
   setInterval(refreshFootballData, DATA_REFRESH_MS);
+  setInterval(() => fetchRecentResults(FOOTBALL_API_KEY), DATA_REFRESH_MS);
+  setInterval(() => fetchTopScorers(FOOTBALL_API_KEY), DATA_REFRESH_MS);
 
   app.listen(PORT, () => {
     console.log(`\n=== Arsenal News Aggregator — Local Dev Server ===`);

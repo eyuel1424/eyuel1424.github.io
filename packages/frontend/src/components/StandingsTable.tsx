@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { StandingsEntry } from "@arsenal/shared";
 import { FORM_RESULTS_COUNT } from "@arsenal/shared";
+import { TopScorers } from "./TopScorers";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -97,11 +98,11 @@ export function StandingsTable() {
             {standings.map((entry) => (
               <tr
                 key={`${entry.competition}-${entry.position}`}
-                className={entry.teamName === "Arsenal" ? "bg-red-warm-10v" : ""}
-                aria-label={entry.teamName === "Arsenal" ? "Arsenal (highlighted)" : undefined}
+                className={entry.teamName.includes("Arsenal") ? "bg-red-warm-10v" : ""}
+                aria-label={entry.teamName.includes("Arsenal") ? "Arsenal (highlighted)" : undefined}
               >
                 <td>{entry.position}</td>
-                <td style={{ fontWeight: entry.teamName === "Arsenal" ? "bold" : "normal" }}>
+                <td style={{ fontWeight: entry.teamName.includes("Arsenal") ? "bold" : "normal" }}>
                   {entry.teamName}
                 </td>
                 <td>{entry.matchesPlayed}</td>
@@ -118,6 +119,9 @@ export function StandingsTable() {
           </tbody>
         </table>
       )}
+
+      <h2 className="usa-heading" style={{ marginTop: "2rem" }}>Top Scorers</h2>
+      <TopScorers />
     </section>
   );
 }

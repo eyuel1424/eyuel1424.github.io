@@ -6,6 +6,15 @@ interface LineupViewProps {
 }
 
 function TeamLineup({ team, side }: { team: LineupTeam; side: string }) {
+  if (team.startingEleven.length === 0) {
+    return (
+      <div aria-label={`${side} team lineup: not yet announced`}>
+        <h4>{team.teamName || side}</h4>
+        <p>Lineup not yet announced.</p>
+      </div>
+    );
+  }
+
   return (
     <div aria-label={`${side} team lineup: ${team.teamName}`}>
       <h4>{team.teamName} ({team.formation})</h4>

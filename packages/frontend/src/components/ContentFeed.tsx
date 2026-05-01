@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { ContentItemCard } from "./ContentItemCard";
 import { FilterPanel } from "./FilterPanel";
+import { AudioSummary } from "./AudioSummary";
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { ErrorRetry } from "./ErrorRetry";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
+const PAGE_SIZE = 12;
 
 interface ContentItem {
   contentId: string;
@@ -18,12 +20,22 @@ interface ContentItem {
   publicationDate?: string;
 }
 
+function timeAgoShort(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
+}
+
 export function ContentFeed() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [contentType, setContentType] = useState("");
-  const [sourceCountry, setSourceCountry] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [page, setPage] = useState(1);
 
   const fetchContent = useCallback(async () => {
     setLoading(true);
@@ -31,40 +43,91 @@ export function ContentFeed() {
     try {
       const params = new URLSearchParams();
       if (contentType) params.set("contentType", contentType);
-      if (sourceCountry) params.set("sourceCountry", sourceCountry);
 
       const response = await fetch(`${API_URL}/content?${params}`);
       if (!response.ok) throw new Error("Failed to fetch content");
       const data = await response.json();
       setItems(data.items ?? []);
+      setLastUpdated(new Date());
+      setPage(1);
     } catch {
       setError("Unable to load content. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [contentType, sourceCountry]);
+  }, [contentType]);
 
   useEffect(() => {
     fetchContent();
   }, [fetchContent]);
 
+  // Client-side search
+  const trimmed = searchTerm.trim().toLowerCase();
+  const filtered = trimmed.length < 2
+    ? items
+    : items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(trimmed) ||
+          item.summary.toLowerCase().includes(trimmed) ||
+          item.sourceName.toLowerCase().includes(trimmed)
+      );
+
+  // Pagination
+  const displayItems = filtered.slice(0, page * PAGE_SIZE);
+  const hasMore = page * PAGE_SIZE < filtered.length;
+
   return (
     <section aria-label="News feed">
-      <h2 className="usa-heading">Latest Arsenal News</h2>
+      <div className="welcome-banner">
+        <h2 className="welcome-banner__title">Your Daily Arsenal Fix</h2>
+        <p className="welcome-banner__text">
+          News, transfers, podcasts, and blogs from {items.length}+ sources worldwide. Updated every 15 minutes.
+        </p>
+        {lastUpdated && (
+          <span className="welcome-banner__updated" aria-label="Last updated">
+            🟢 Updated {timeAgoShort(lastUpdated)}
+          </span>
+        )}
+      </div>
+
+      <AudioSummary />
+
       <FilterPanel
         contentType={contentType}
-        sourceCountry={sourceCountry}
-        onContentTypeChange={setContentType}
-        onSourceCountryChange={setSourceCountry}
+        searchTerm={searchTerm}
+        onContentTypeChange={(v) => { setContentType(v); setPage(1); }}
+        onSearchTermChange={(v) => { setSearchTerm(v); setPage(1); }}
       />
+
       {loading && <LoadingSkeleton count={5} type="card" />}
       {error && <ErrorRetry message={error} onRetry={fetchContent} />}
-      {!loading && !error && items.length === 0 && <p>No content available.</p>}
+      {!loading && !error && filtered.length === 0 && (
+        <p>{trimmed ? `No results for "${searchTerm}".` : "No content available."}</p>
+      )}
+
+      {!loading && !error && filtered.length > 0 && (
+        <p className="results-count">
+          Showing {displayItems.length} of {filtered.length} articles
+        </p>
+      )}
+
       <div className="usa-card-group">
-        {items.map((item) => (
-          <ContentItemCard key={item.contentId} item={item} />
+        {displayItems.map((item) => (
+          <ContentItemCard key={item.contentId} item={item} searchTerm={searchTerm.trim()} />
         ))}
       </div>
+
+      {hasMore && (
+        <div className="load-more">
+          <button
+            className="usa-button load-more__btn"
+            onClick={() => setPage(page + 1)}
+            type="button"
+          >
+            Load more ({filtered.length - displayItems.length} remaining)
+          </button>
+        </div>
+      )}
     </section>
   );
 }

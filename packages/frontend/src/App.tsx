@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { WebSocketProvider } from "./context/WebSocketContext";
 import { Header } from "./components/Header";
@@ -11,6 +11,8 @@ import { StandingsTable } from "./components/StandingsTable";
 import { BookmarkList } from "./components/BookmarkList";
 import { NotificationBanner } from "./components/NotificationBanner";
 import { DigestPreview } from "./components/DigestPreview";
+
+import { NotFoundPage } from "./components/NotFoundPage";
 
 export function App() {
   return (
@@ -29,7 +31,7 @@ export function App() {
                   <Route path="/standings" element={<StandingsTable />} />
                   <Route path="/saved" element={<BookmarkList />} />
                   <Route path="/digest" element={<DigestPreview />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </div>
             </main>

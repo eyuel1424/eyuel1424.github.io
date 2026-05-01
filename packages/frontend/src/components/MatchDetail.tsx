@@ -29,11 +29,19 @@ export function MatchDetail({ matchId }: MatchDetailProps) {
         if (lineupRes.ok) {
           const data = await lineupRes.json();
           const lineups = data.lineups ?? [];
-          if (lineups.length >= 2) {
+          if (lineups.length >= 1) {
+            const homeTeam = lineups.find((l: { teamSide: string }) => l.teamSide === "home");
+            const awayTeam = lineups.find((l: { teamSide: string }) => l.teamSide === "away");
+            const placeholder: import("@arsenal/shared").LineupTeam = {
+              teamName: "TBD",
+              formation: "",
+              startingEleven: [],
+              substitutes: [],
+            };
             setLineup({
               matchId,
-              homeTeam: lineups.find((l: { teamSide: string }) => l.teamSide === "home") ?? lineups[0],
-              awayTeam: lineups.find((l: { teamSide: string }) => l.teamSide === "away") ?? lineups[1],
+              homeTeam: homeTeam ?? placeholder,
+              awayTeam: awayTeam ?? placeholder,
             });
           }
         }

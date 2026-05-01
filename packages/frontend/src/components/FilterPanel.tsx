@@ -3,16 +3,16 @@ import { CONTENT_TYPES } from "@arsenal/shared";
 
 interface FilterPanelProps {
   contentType: string;
-  sourceCountry: string;
+  searchTerm: string;
   onContentTypeChange: (value: string) => void;
-  onSourceCountryChange: (value: string) => void;
+  onSearchTermChange: (value: string) => void;
 }
 
 export function FilterPanel({
   contentType,
-  sourceCountry,
+  searchTerm,
   onContentTypeChange,
-  onSourceCountryChange,
+  onSearchTermChange,
 }: FilterPanelProps) {
   return (
     <fieldset className="usa-fieldset filter-panel">
@@ -38,15 +38,16 @@ export function FilterPanel({
           </button>
         ))}
       </div>
-      <div className="filter-country">
-        <label className="usa-label" htmlFor="filter-country">Country</label>
+      <div className="filter-search">
+        <label className="usa-label" htmlFor="filter-search">Search</label>
         <input
           className="usa-input"
-          id="filter-country"
-          type="text"
-          placeholder="e.g. England"
-          value={sourceCountry}
-          onChange={(e) => onSourceCountryChange(e.target.value)}
+          id="filter-search"
+          type="search"
+          placeholder="Search articles, podcasts, blogs..."
+          value={searchTerm}
+          onChange={(e) => onSearchTermChange(e.target.value)}
+          aria-label="Search content"
         />
       </div>
     </fieldset>

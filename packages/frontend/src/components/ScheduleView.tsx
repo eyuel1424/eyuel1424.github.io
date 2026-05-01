@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { RecentResults } from "./RecentResults";
+import { InjuryReport } from "./InjuryReport";
+import { HeadToHead } from "./HeadToHead";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -16,6 +19,12 @@ function isWithin24Hours(kickoffTime: string): boolean {
   const kickoff = new Date(kickoffTime).getTime();
   const now = Date.now();
   return kickoff - now > 0 && kickoff - now <= 24 * 60 * 60 * 1000;
+}
+
+function getNextOpponent(matches: ScheduleMatch[]): string {
+  if (matches.length === 0) return "";
+  const next = matches[0];
+  return next.homeTeam.includes("Arsenal") ? next.awayTeam : next.homeTeam;
 }
 
 export function ScheduleView() {
@@ -38,9 +47,15 @@ export function ScheduleView() {
     fetchSchedule();
   }, []);
 
+  const nextOpponent = getNextOpponent(matches);
+
   return (
-    <section aria-label="Upcoming matches">
-      <h2 className="usa-heading">Upcoming Matches</h2>
+    <section aria-label="Schedule and results">
+      <h2 className="usa-heading">Schedule & Results</h2>
+
+      <RecentResults />
+
+      <h3 className="schedule__subtitle">Upcoming Matches</h3>
       {loading && <p>Loading...</p>}
       {!loading && matches.length === 0 && <p>No upcoming matches scheduled.</p>}
       {matches.length > 0 && (
@@ -58,8 +73,9 @@ export function ScheduleView() {
             {matches.map((match) => {
               const kickoff = new Date(match.kickoffTime);
               const highlight = isWithin24Hours(match.kickoffTime);
-              const opponent = match.homeTeam === "Arsenal" ? match.awayTeam : match.homeTeam;
-              const homeAway = match.homeTeam === "Arsenal" ? "(H)" : "(A)";
+              const isHome = match.homeTeam.includes("Arsenal");
+              const opponent = isHome ? match.awayTeam : match.homeTeam;
+              const homeAway = isHome ? "(H)" : "(A)";
 
               return (
                 <tr
@@ -78,6 +94,10 @@ export function ScheduleView() {
           </tbody>
         </table>
       )}
+
+      {nextOpponent && <HeadToHead opponent={nextOpponent} />}
+
+      <InjuryReport />
     </section>
   );
 }

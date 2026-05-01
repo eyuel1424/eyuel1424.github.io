@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { LoadingSkeleton } from "./LoadingSkeleton";
+import { SubscribeForm } from "./SubscribeForm";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -25,7 +26,18 @@ export function DigestPreview() {
   return (
     <section aria-label="Daily digest preview">
       <h2 className="usa-heading">Daily Digest Preview</h2>
-      <p className="text-base-dark">This is what subscribers receive at 9:00 AM EST every day.</p>
+
+      <div className="digest-cta">
+        <div className="digest-cta__text">
+          <h3 className="digest-cta__title">📬 Get this in your inbox every morning</h3>
+          <p className="digest-cta__desc">Subscribe to receive the Arsenal Daily Digest at 9:00 AM EST. Free, no spam, unsubscribe anytime.</p>
+        </div>
+        <SubscribeForm />
+      </div>
+
+      <p className="text-base-dark" style={{ marginTop: "1.5rem" }}>
+        Below is a preview of what subscribers receive every day.
+      </p>
       {loading && <LoadingSkeleton count={5} type="card" />}
       {!loading && (
         <div

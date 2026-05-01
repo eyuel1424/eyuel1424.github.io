@@ -57,33 +57,33 @@ function matchesAny(text: string, patterns: RegExp[]): boolean {
 }
 
 /**
- * Classify content as transfer-related based on title/summary keywords.
+ * Classify content as transfer-related based on title keywords.
+ * Only the title is checked to avoid false positives from incidental
+ * mentions of transfer-related words in editorial summaries.
  * Returns null if the content is not transfer-related.
  */
 export function classifyTransferItem(
   title: string,
-  summary: string
+  _summary: string
 ): TransferClassification | null {
-  const combined = `${title} ${summary}`;
-
   // Check specific types first (more specific → less specific)
-  if (matchesAny(combined, LOAN_PATTERNS)) {
+  if (matchesAny(title, LOAN_PATTERNS)) {
     return { isTransfer: true, transferType: "loan" };
   }
 
-  if (matchesAny(combined, CONTRACT_PATTERNS)) {
+  if (matchesAny(title, CONTRACT_PATTERNS)) {
     return { isTransfer: true, transferType: "contract_extension" };
   }
 
-  if (matchesAny(combined, DEPARTURE_PATTERNS)) {
+  if (matchesAny(title, DEPARTURE_PATTERNS)) {
     return { isTransfer: true, transferType: "departure" };
   }
 
-  if (matchesAny(combined, CONFIRMED_PATTERNS)) {
+  if (matchesAny(title, CONFIRMED_PATTERNS)) {
     return { isTransfer: true, transferType: "confirmed_signing" };
   }
 
-  if (matchesAny(combined, RUMOR_PATTERNS)) {
+  if (matchesAny(title, RUMOR_PATTERNS)) {
     return { isTransfer: true, transferType: "rumor" };
   }
 
