@@ -1,5 +1,4 @@
-const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY ?? "";
-const BASE_URL = "https://api.football-data.org/v4";
+const PROXY_URL = "https://arsenal-proxy.eyuelkt.workers.dev";
 const ARSENAL_ID = 57;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -20,11 +19,9 @@ function setCache<T>(key: string, data: T): void {
 }
 
 async function apiFetch(path: string): Promise<any> {
-  const url = `${BASE_URL}${path}`;
-  const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+  const res = await fetch(`${PROXY_URL}${path}`);
   if (!res.ok) throw new Error("Request failed");
-  const json = await res.json();
-  return JSON.parse(json.contents);
+  return res.json();
 }
 
 export interface Match {

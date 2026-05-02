@@ -1,1 +1,9 @@
-<!DOCTYPE html><html><head><script>sessionStorage.redirect=location.href;</script><meta http-equiv="refresh" content="0;URL=/London49/"></head></html>
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+  var path = window.location.pathname.replace('/London49', '');
+  window.location.replace('/London49/' + '#' + path);
+</script>
+</head>
+</html>
