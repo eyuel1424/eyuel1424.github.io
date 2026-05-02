@@ -1,21 +1,7 @@
 import React, { useEffect, useState } from "react";
-import type { TransferType } from "@arsenal/shared";
+import { fetchArsenalTransfers, TransferItem } from "../services/newsService";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "";
-
-interface TransferItem {
-  contentId: string;
-  title: string;
-  summary: string;
-  durationLabel: string;
-  sourceUrl: string;
-  sourceName: string;
-  sourceCountry: string;
-  transferType: TransferType;
-  publicationDate: string;
-}
-
-const ALL_TYPES: { value: TransferType | ""; label: string }[] = [
+const ALL_TYPES = [
   { value: "", label: "All" },
   { value: "rumor", label: "Rumors" },
   { value: "confirmed_signing", label: "Confirmed" },
@@ -24,10 +10,10 @@ const ALL_TYPES: { value: TransferType | ""; label: string }[] = [
   { value: "departure", label: "Departures" },
 ];
 
-const CONFIRMED_TYPES: TransferType[] = ["confirmed_signing", "loan", "contract_extension", "departure"];
+const CONFIRMED_TYPES = ["confirmed_signing", "loan", "contract_extension", "departure"];
 
-function transferLabel(type: TransferType): string {
-  const labels: Record<TransferType, string> = {
+function transferLabel(type: string): string {
+  const labels: Record<string, string> = {
     rumor: "Rumor",
     confirmed_signing: "Confirmed",
     loan: "Loan",
@@ -39,24 +25,14 @@ function transferLabel(type: TransferType): string {
 
 export function TransferFeed() {
   const [items, setItems] = useState<TransferItem[]>([]);
-  const [filter, setFilter] = useState<TransferType | "">("");
+  const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchTransfers = async () => {
-      try {
-        const response = await fetch(`${API_URL}/transfers`);
-        if (!response.ok) throw new Error("Failed to fetch transfers");
-        const data = await response.json();
-        setItems(data.items ?? []);
-      } catch {
-        setError("Unable to load transfer news.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTransfers();
+    fetchArsenalTransfers()
+      .then(data => { setItems(data); setLoading(false); })
+      .catch(() => { setError("Unable to load transfer news."); setLoading(false); });
   }, []);
 
   const displayed = filter ? items.filter(i => i.transferType === filter) : items;
@@ -64,7 +40,6 @@ export function TransferFeed() {
   return (
     <section aria-label="Transfer news">
       <h2 className="usa-heading">Transfer News</h2>
-
       <div className="filter-type-row" role="group" aria-label="Transfer type filter">
         {ALL_TYPES.map(({ value, label }) => (
           <button
@@ -78,7 +53,6 @@ export function TransferFeed() {
           </button>
         ))}
       </div>
-
       {loading && <p>Loading...</p>}
       {error && (
         <div className="usa-alert usa-alert--error" role="alert">
@@ -86,7 +60,7 @@ export function TransferFeed() {
         </div>
       )}
       {!loading && !error && displayed.length === 0 && (
-        <p>{filter ? `No ${filter.replace("_", " ")} transfers.` : "No current transfer activity."}</p>
+        <p>{filter ? `No ${filter.replace("_", " ")} transfers.` : "No current transfer activity found."}</p>
       )}
       <ul className="usa-list usa-list--unstyled">
         {displayed.map((item) => {
@@ -94,10 +68,7 @@ export function TransferFeed() {
           return (
             <li key={item.contentId} className="usa-card__container margin-bottom-2">
               <div className="usa-card__body">
-                <span
-                  className={`usa-tag ${isConfirmed ? "bg-green" : "bg-gold"}`}
-                  aria-label={isConfirmed ? "Confirmed transfer" : "Unconfirmed rumor"}
-                >
+                <span className={`usa-tag ${isConfirmed ? "bg-green" : "bg-gold"}`}>
                   {transferLabel(item.transferType)}
                 </span>
                 <h3>
@@ -106,9 +77,7 @@ export function TransferFeed() {
                   </a>
                 </h3>
                 <p>{item.summary}</p>
-                <p className="text-base-dark font-sans-3xs">
-                  {item.sourceName} Â· {item.sourceCountry}
-                </p>
+                <p className="text-base-dark font-sans-3xs">{item.sourceName} · {item.sourceCountry}</p>
               </div>
             </li>
           );

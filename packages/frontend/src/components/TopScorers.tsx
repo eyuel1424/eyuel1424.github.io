@@ -1,15 +1,5 @@
 import React, { useEffect, useState } from "react";
-
-const API_URL = import.meta.env.VITE_API_URL ?? "";
-
-interface Scorer {
-  playerName: string;
-  teamName: string;
-  goals: number;
-  assists: number;
-  matchesPlayed: number;
-  isArsenal: boolean;
-}
+import { fetchTopScorers, Scorer } from "../services/footballService";
 
 export function TopScorers() {
   const [scorers, setScorers] = useState<Scorer[]>([]);
@@ -17,22 +7,12 @@ export function TopScorers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchScorers = async () => {
-      try {
-        const response = await fetch(`${API_URL}/top-scorers`);
-        if (!response.ok) return;
-        const data = await response.json();
-        setScorers(data.scorers ?? []);
-      } catch {
-        // Graceful degradation
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchScorers();
+    fetchTopScorers()
+      .then(data => { setScorers(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>Loading top scorers...</p>;
   if (scorers.length === 0) return <p>No scorer data available.</p>;
 
   const displayed = showAll ? scorers : scorers.slice(0, 10);
@@ -52,14 +32,10 @@ export function TopScorers() {
         </thead>
         <tbody>
           {displayed.map((s, i) => (
-            <tr
-              key={`${s.playerName}-${i}`}
-              className={s.isArsenal ? "bg-red-warm-10v" : ""}
-              aria-label={s.isArsenal ? `${s.playerName} (Arsenal)` : undefined}
-            >
+            <tr key={`${s.playerName}-${i}`} className={s.isArsenal ? "bg-red-warm-10v" : ""}>
               <td>{i + 1}</td>
               <td style={{ fontWeight: s.isArsenal ? "bold" : "normal" }}>
-                {s.playerName} {s.isArsenal && <span className="top-scorers__cannon" aria-label="Arsenal player">🔴</span>}
+                {s.playerName} {s.isArsenal && "??"}
               </td>
               <td>{s.teamName}</td>
               <td>{s.matchesPlayed}</td>
@@ -71,7 +47,7 @@ export function TopScorers() {
       </table>
       {scorers.length > 10 && (
         <button
-          className="usa-button usa-button--unstyled top-scorers__toggle"
+          className="usa-button usa-button--unstyled"
           onClick={() => setShowAll(!showAll)}
           type="button"
         >

@@ -1,35 +1,19 @@
 import React, { useEffect, useState } from "react";
-import type { StandingsEntry } from "@arsenal/shared";
-import { FORM_RESULTS_COUNT } from "@arsenal/shared";
+import { fetchPremierLeagueStandings, Standing } from "../services/footballService";
 import { TopScorers } from "./TopScorers";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "";
-
-const COMPETITIONS = ["Premier League", "Champions League", "FA Cup", "League Cup"];
-
 function FormIndicator({ form }: { form: string[] }) {
-  const display = form.slice(0, FORM_RESULTS_COUNT);
   return (
-    <span aria-label={`Recent form: ${display.join(", ")}`}>
-      {display.map((result, i) => {
+    <span>
+      {form.slice(0, 5).map((result, i) => {
         const color = result === "W" ? "green" : result === "D" ? "gold" : "red";
         return (
-          <span
-            key={i}
-            style={{
-              display: "inline-block",
-              width: "1.2em",
-              height: "1.2em",
-              lineHeight: "1.2em",
-              textAlign: "center",
-              borderRadius: "2px",
-              backgroundColor: color,
-              color: "white",
-              fontSize: "0.75em",
-              marginRight: "2px",
-              fontWeight: "bold",
-            }}
-          >
+          <span key={i} style={{
+            display: "inline-block", width: "1.2em", height: "1.2em",
+            lineHeight: "1.2em", textAlign: "center", borderRadius: "2px",
+            backgroundColor: color, color: "white", fontSize: "0.75em",
+            marginRight: "2px", fontWeight: "bold",
+          }}>
             {result}
           </span>
         );
@@ -39,46 +23,24 @@ function FormIndicator({ form }: { form: string[] }) {
 }
 
 export function StandingsTable() {
-  const [standings, setStandings] = useState<StandingsEntry[]>([]);
-  const [competition, setCompetition] = useState("Premier League");
+  const [standings, setStandings] = useState<Standing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchStandings = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`${API_URL}/standings?competition=${encodeURIComponent(competition)}`);
-        if (!response.ok) throw new Error("Failed to fetch standings");
-        const data = await response.json();
-        setStandings(data.standings ?? []);
-      } catch {
-        // Graceful degradation
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStandings();
-  }, [competition]);
+    fetchPremierLeagueStandings()
+      .then(data => { setStandings(data); setLoading(false); })
+      .catch(() => { setError("Unable to load standings."); setLoading(false); });
+  }, []);
 
   return (
     <section aria-label="League standings">
-      <h2 className="usa-heading">Standings</h2>
-      <label className="usa-label" htmlFor="competition-select">Competition</label>
-      <select
-        className="usa-select"
-        id="competition-select"
-        value={competition}
-        onChange={(e) => setCompetition(e.target.value)}
-      >
-        {COMPETITIONS.map((comp) => (
-          <option key={comp} value={comp}>{comp}</option>
-        ))}
-      </select>
-
-      {loading && <p>Loading...</p>}
-      {!loading && standings.length === 0 && <p>No standings available.</p>}
+      <h2 className="usa-heading">Premier League Standings</h2>
+      {loading && <p>Loading standings...</p>}
+      {error && <p style={{ color: "#EF0107" }}>{error}</p>}
+      {!loading && !error && standings.length === 0 && <p>No standings available.</p>}
       {standings.length > 0 && (
-        <table className="usa-table" aria-label={`${competition} standings`}>
+        <table className="usa-table" aria-label="Premier League standings">
           <thead>
             <tr>
               <th scope="col">Pos</th>
@@ -97,9 +59,8 @@ export function StandingsTable() {
           <tbody>
             {standings.map((entry) => (
               <tr
-                key={`${entry.competition}-${entry.position}`}
+                key={entry.position}
                 className={entry.teamName.includes("Arsenal") ? "bg-red-warm-10v" : ""}
-                aria-label={entry.teamName.includes("Arsenal") ? "Arsenal (highlighted)" : undefined}
               >
                 <td>{entry.position}</td>
                 <td style={{ fontWeight: entry.teamName.includes("Arsenal") ? "bold" : "normal" }}>
@@ -119,7 +80,6 @@ export function StandingsTable() {
           </tbody>
         </table>
       )}
-
       <h2 className="usa-heading" style={{ marginTop: "2rem" }}>Top Scorers</h2>
       <TopScorers />
     </section>

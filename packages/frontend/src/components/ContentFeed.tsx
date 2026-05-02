@@ -4,21 +4,9 @@ import { FilterPanel } from "./FilterPanel";
 import { AudioSummary } from "./AudioSummary";
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { ErrorRetry } from "./ErrorRetry";
+import { fetchArsenalNews, ContentItem } from "../services/newsService";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "";
 const PAGE_SIZE = 12;
-
-interface ContentItem {
-  contentId: string;
-  title: string;
-  summary: string;
-  durationLabel: string;
-  sourceUrl: string;
-  sourceName: string;
-  sourceCountry: string;
-  contentType: string;
-  publicationDate?: string;
-}
 
 function timeAgoShort(date: Date): string {
   const diffMs = Date.now() - date.getTime();
@@ -41,13 +29,8 @@ export function ContentFeed() {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams();
-      if (contentType) params.set("contentType", contentType);
-
-      const response = await fetch(`${API_URL}/content?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch content");
-      const data = await response.json();
-      setItems(data.items ?? []);
+      const data = await fetchArsenalNews(contentType || undefined);
+      setItems(data);
       setLastUpdated(new Date());
       setPage(1);
     } catch {
@@ -61,7 +44,6 @@ export function ContentFeed() {
     fetchContent();
   }, [fetchContent]);
 
-  // Client-side search
   const trimmed = searchTerm.trim().toLowerCase();
   const filtered = trimmed.length < 2
     ? items
@@ -72,7 +54,6 @@ export function ContentFeed() {
           item.sourceName.toLowerCase().includes(trimmed)
       );
 
-  // Pagination
   const displayItems = filtered.slice(0, page * PAGE_SIZE);
   const hasMore = page * PAGE_SIZE < filtered.length;
 
@@ -85,7 +66,7 @@ export function ContentFeed() {
         </p>
         {lastUpdated && (
           <span className="welcome-banner__updated" aria-label="Last updated">
-            🟢 Updated {timeAgoShort(lastUpdated)}
+            ?? Updated {timeAgoShort(lastUpdated)}
           </span>
         )}
       </div>

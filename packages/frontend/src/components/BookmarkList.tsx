@@ -1,20 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { ContentItemCard } from "./ContentItemCard";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "";
-
-interface ContentItem {
+interface BookmarkedArticle {
   contentId: string;
   title: string;
-  summary: string;
-  durationLabel: string;
   sourceUrl: string;
   sourceName: string;
-  sourceCountry: string;
-  contentType: string;
+  publicationDate?: string;
 }
 
-function getBookmarkIds(): string[] {
+function getBookmarks(): BookmarkedArticle[] {
   try {
     const stored = localStorage.getItem("arsenal-bookmarks");
     return stored ? JSON.parse(stored) : [];
@@ -24,47 +18,32 @@ function getBookmarkIds(): string[] {
 }
 
 export function BookmarkList() {
-  const [items, setItems] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<BookmarkedArticle[]>([]);
 
   useEffect(() => {
-    const fetchBookmarked = async () => {
-      const ids = getBookmarkIds();
-      if (ids.length === 0) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const fetched: ContentItem[] = [];
-        for (const id of ids) {
-          const response = await fetch(`${API_URL}/content/${id}`);
-          if (response.ok) {
-            fetched.push(await response.json());
-          }
-        }
-        setItems(fetched);
-      } catch {
-        // Graceful degradation
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBookmarked();
+    setItems(getBookmarks());
   }, []);
 
   return (
     <section aria-label="Saved articles">
       <h2 className="usa-heading">Saved Articles</h2>
-      {loading && <p>Loading...</p>}
-      {!loading && items.length === 0 && <p>No saved articles yet.</p>}
-      <div className="usa-card-group">
+      {items.length === 0 && (
+        <p>No saved articles yet. Use the bookmark icon on any article to save it here.</p>
+      )}
+      <ul className="usa-list usa-list--unstyled">
         {items.map((item) => (
-          <ContentItemCard key={item.contentId} item={item} />
+          <li key={item.contentId} className="usa-card__container margin-bottom-2">
+            <div className="usa-card__body">
+              <h3>
+                <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="usa-link">
+                  {item.title}
+                </a>
+              </h3>
+              <p className="text-base-dark font-sans-3xs">{item.sourceName}</p>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

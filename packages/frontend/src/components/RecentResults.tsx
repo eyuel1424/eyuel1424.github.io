@@ -1,17 +1,5 @@
 import React, { useEffect, useState } from "react";
-
-const API_URL = import.meta.env.VITE_API_URL ?? "";
-
-interface Result {
-  matchId: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number;
-  awayScore: number;
-  competition: string;
-  matchDate: string;
-  result: "W" | "D" | "L";
-}
+import { fetchArsenalResults, Match } from "../services/footballService";
 
 const RESULT_COLORS: Record<string, string> = {
   W: "#2E8540",
@@ -20,26 +8,16 @@ const RESULT_COLORS: Record<string, string> = {
 };
 
 export function RecentResults() {
-  const [results, setResults] = useState<Result[]>([]);
+  const [results, setResults] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        const response = await fetch(`${API_URL}/recent-results`);
-        if (!response.ok) return;
-        const data = await response.json();
-        setResults(data.results ?? []);
-      } catch {
-        // Graceful degradation
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchResults();
+    fetchArsenalResults()
+      .then(data => { setResults(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return null;
+  if (loading) return <p>Loading recent results...</p>;
   if (results.length === 0) return null;
 
   return (
@@ -50,7 +28,7 @@ export function RecentResults() {
           <div key={r.matchId} className="recent-results__card">
             <span
               className="recent-results__badge"
-              style={{ backgroundColor: RESULT_COLORS[r.result] }}
+              style={{ backgroundColor: RESULT_COLORS[r.result ?? "D"] }}
             >
               {r.result}
             </span>
@@ -64,7 +42,7 @@ export function RecentResults() {
               </span>
             </div>
             <span className="recent-results__meta">
-              {r.competition} Â· {new Date(r.matchDate).toLocaleDateString()}
+              {r.competition} · {new Date(r.kickoffTime).toLocaleDateString()}
             </span>
           </div>
         ))}

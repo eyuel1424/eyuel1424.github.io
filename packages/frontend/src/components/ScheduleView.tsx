@@ -1,19 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { fetchArsenalFixtures, Match } from "../services/footballService";
 import { RecentResults } from "./RecentResults";
 import { InjuryReport } from "./InjuryReport";
-import { HeadToHead } from "./HeadToHead";
-
-const API_URL = import.meta.env.VITE_API_URL ?? "";
-
-interface ScheduleMatch {
-  matchId: string;
-  homeTeam: string;
-  awayTeam: string;
-  competition: string;
-  venue: string;
-  kickoffTime: string;
-  status: string;
-}
 
 function isWithin24Hours(kickoffTime: string): boolean {
   const kickoff = new Date(kickoffTime).getTime();
@@ -21,43 +9,25 @@ function isWithin24Hours(kickoffTime: string): boolean {
   return kickoff - now > 0 && kickoff - now <= 24 * 60 * 60 * 1000;
 }
 
-function getNextOpponent(matches: ScheduleMatch[]): string {
-  if (matches.length === 0) return "";
-  const next = matches[0];
-  return next.homeTeam.includes("Arsenal") ? next.awayTeam : next.homeTeam;
-}
-
 export function ScheduleView() {
-  const [matches, setMatches] = useState<ScheduleMatch[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchSchedule = async () => {
-      try {
-        const response = await fetch(`${API_URL}/schedule`);
-        if (!response.ok) throw new Error("Failed to fetch schedule");
-        const data = await response.json();
-        setMatches(data.matches ?? []);
-      } catch {
-        // Graceful degradation
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSchedule();
+    fetchArsenalFixtures()
+      .then(data => { setMatches(data); setLoading(false); })
+      .catch(() => { setError("Unable to load fixtures."); setLoading(false); });
   }, []);
-
-  const nextOpponent = getNextOpponent(matches);
 
   return (
     <section aria-label="Schedule and results">
       <h2 className="usa-heading">Schedule & Results</h2>
-
       <RecentResults />
-
-      <h3 className="schedule__subtitle">Upcoming Matches</h3>
-      {loading && <p>Loading...</p>}
-      {!loading && matches.length === 0 && <p>No upcoming matches scheduled.</p>}
+      <h3 style={{ marginTop: "2rem" }}>Upcoming Matches</h3>
+      {loading && <p>Loading fixtures...</p>}
+      {error && <p style={{ color: "#EF0107" }}>{error}</p>}
+      {!loading && !error && matches.length === 0 && <p>No upcoming matches scheduled.</p>}
       {matches.length > 0 && (
         <table className="usa-table usa-table--borderless" aria-label="Match schedule">
           <thead>
@@ -75,17 +45,11 @@ export function ScheduleView() {
               const highlight = isWithin24Hours(match.kickoffTime);
               const isHome = match.homeTeam.includes("Arsenal");
               const opponent = isHome ? match.awayTeam : match.homeTeam;
-              const homeAway = isHome ? "(H)" : "(A)";
-
               return (
-                <tr
-                  key={match.matchId}
-                  className={highlight ? "bg-gold-lighter" : ""}
-                  aria-label={highlight ? "Match within 24 hours" : undefined}
-                >
+                <tr key={match.matchId} className={highlight ? "bg-gold-lighter" : ""}>
                   <td>{kickoff.toLocaleDateString()}</td>
                   <td>{kickoff.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
-                  <td>{opponent} {homeAway}</td>
+                  <td>{opponent} {isHome ? "(H)" : "(A)"}</td>
                   <td>{match.competition}</td>
                   <td>{match.venue}</td>
                 </tr>
@@ -94,9 +58,6 @@ export function ScheduleView() {
           </tbody>
         </table>
       )}
-
-      {nextOpponent && <HeadToHead opponent={nextOpponent} />}
-
       <InjuryReport />
     </section>
   );
