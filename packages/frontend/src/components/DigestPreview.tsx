@@ -7,7 +7,7 @@ export function DigestPreview() {
       <h2 className="usa-heading">Daily Digest Preview</h2>
       <div className="digest-cta">
         <div className="digest-cta__text">
-          <h3 className="digest-cta__title">?? Get this in your inbox every morning</h3>
+          <h3 className="digest-cta__title">mail Get this in your inbox every morning</h3>
           <p className="digest-cta__desc">Subscribe to receive the Arsenal Daily Digest at 9:00 AM EST. Free, no spam, unsubscribe anytime.</p>
         </div>
         <SubscribeForm />
@@ -23,3 +23,4 @@ export function DigestPreview() {
     </section>
   );
 }
+
