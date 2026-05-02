@@ -27,6 +27,8 @@ jobs:
 
       - name: Build frontend
         run: cd packages/frontend && npx vite build
+        env:
+          VITE_FOOTBALL_API_KEY: ${{ secrets.VITE_FOOTBALL_API_KEY }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
