@@ -18,14 +18,11 @@ const TYPE_COLORS: Record<string, string> = {
   departure: "#EF0107",
 };
 
+const PLAYER_KEYWORDS = ["sign", "transfer", "loan", "depart", "exit", "bid", "fee", "contract", "extension", "rumour", "rumor", "target", "linked", "move", "join", "leave", "sold", "release", "swap", "deal"];
+const EXCLUDE_KEYWORDS = ["result", "score", "goal", "match", "game", "win", "lose", "draw", "league table", "standings", "fixture", "kickoff", "preview", "review", "analysis", "tactical"];
+
 function transferLabel(type: string): string {
-  const labels: Record<string, string> = {
-    rumor: "Rumor",
-    confirmed_signing: "Confirmed",
-    loan: "Loan",
-    contract_extension: "Extension",
-    departure: "Departure",
-  };
+  const labels: Record<string, string> = { rumor: "Rumor", confirmed_signing: "Confirmed", loan: "Loan", contract_extension: "Extension", departure: "Departure" };
   return labels[type] ?? type;
 }
 
@@ -46,7 +43,16 @@ export function TransferFeed() {
 
   useEffect(() => {
     fetchArsenalTransfers()
-      .then(data => { setItems(data); setLoading(false); })
+      .then(data => {
+        const filtered = data.filter(item => {
+          const text = (item.title + " " + item.summary).toLowerCase();
+          const hasPlayerKeyword = PLAYER_KEYWORDS.some(k => text.includes(k));
+          const hasExcludeKeyword = EXCLUDE_KEYWORDS.some(k => text.includes(k));
+          return hasPlayerKeyword && !hasExcludeKeyword;
+        });
+        setItems(filtered);
+        setLoading(false);
+      })
       .catch(() => { setError("Unable to load transfer news."); setLoading(false); });
   }, []);
 
@@ -63,7 +69,7 @@ export function TransferFeed() {
       {loading && <p>Loading transfer news...</p>}
       {error && <p style={{ color: "#EF0107" }}>{error}</p>}
       {!loading && !error && displayed.length === 0 && (
-        <p style={{ color: "#9CA3AF" }}>{filter ? `No ${filter.replace("_", " ")} transfers found.` : "No transfer activity found. Check back soon."}</p>
+        <p style={{ color: "#9CA3AF" }}>{filter ? `No ${filter.replace("_", " ")} transfers found.` : "No player transfer activity found. Check back soon."}</p>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {displayed.map((item) => (

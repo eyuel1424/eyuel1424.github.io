@@ -1,24 +1,45 @@
-import React from "react";
-import { useTheme } from "../context/ThemeContext";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+type Theme = "light" | "dark";
+
+interface ThemeContextValue {
+  theme: Theme;
+  toggleTheme: () => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: "dark",
+  toggleTheme: () => {},
+});
+
+export function useTheme(): ThemeContextValue {
+  return useContext(ThemeContext);
+}
+
+function getInitialTheme(): Theme {
+  try {
+    const stored = localStorage.getItem("arsenal-theme");
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {}
+  return "dark";
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.className = theme === "light" ? "theme-light" : "theme-dark";
+    try {
+      localStorage.setItem("arsenal-theme", theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
+
   return (
-    <button
-      onClick={toggleTheme}
-      type="button"
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      style={{
-        background: "none",
-        border: "2px solid currentColor",
-        borderRadius: "20px",
-        padding: "4px 12px",
-        cursor: "pointer",
-        fontSize: "0.85rem",
-        color: "inherit",
-      }}
-    >
-      {theme === "dark" ? "Light Mode" : "Dark Mode"}
-    </button>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
   );
 }
