@@ -40,6 +40,8 @@ export interface TransferItem {
   durationLabel: string;
 }
 
+const PROXY = "https://arsenal-proxy.eyuelkt.workers.dev/rss?url=";
+
 const RSS_SOURCES = [
   { url: "https://feeds.bbci.co.uk/sport/football/rss.xml", name: "BBC Sport", country: "England", type: "news" },
   { url: "https://www.skysports.com/rss/12040", name: "Sky Sports", country: "England", type: "news" },
@@ -53,7 +55,8 @@ const RSS_SOURCES = [
   { url: "https://arseblog.com/category/arsecast/feed/", name: "Arsecast", country: "England", type: "podcast" },
   { url: "https://feeds.feedburner.com/HandbrakeFc", name: "Handbrake FC", country: "England", type: "podcast" },
   { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCmDTnDfLBnCMkRKFBgDbZsA", name: "Arsenal FC Official", country: "England", type: "video" },
-{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_dJLZU3fRb89B03cFHQVdA", name: "AFTV", country: "England", type: "video" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_dJLZU3fRb89B03cFHQVdA", name: "AFTV", country: "England", type: "video" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCEFHn_bMcTkFkKhFpEFkWAw", name: "Arsenal Highlights", country: "England", type: "video" },
 ];
 
 const TRANSFER_SOURCES = [
@@ -66,7 +69,7 @@ const TRANSFER_SOURCES = [
   { url: "https://le-grove.co.uk/feed", name: "Le Grove", country: "England" },
 ];
 
-const TRANSFER_KEYWORDS = ["transfer", "sign", "signing", "deal", "loan", "depart", "exit", "bid", "fee", "contract", "extension", "rumour", "rumor", "target", "move", "linked", "interest"];
+const TRANSFER_KEYWORDS = ["transfer", "sign", "signing", "deal", "loan", "depart", "exit", "bid", "fee", "contract", "extension", "rumour", "rumor", "target", "move", "linked", "interest", "window", "summer", "january"];
 
 function parseRSSDate(dateStr: string | null): string | undefined {
   if (!dateStr) return undefined;
@@ -88,19 +91,34 @@ function guessTransferType(text: string): string {
 }
 
 async function fetchRSSItems(source: { url: string; name: string; country: string; type?: string }): Promise<any[]> {
-  const proxyUrl = `https://arsenal-proxy.eyuelkt.workers.dev/rss?url=${encodeURIComponent(source.url)}`;
-  const res = await fetch(proxyUrl);
+  const res = await fetch(`${PROXY}${encodeURIComponent(source.url)}`);
   if (!res.ok) return [];
   const text = await res.text();
   const xml = new DOMParser().parseFromString(text, "text/xml");
-  return Array.from(xml.querySelectorAll("item")).map((item, i) => ({
-    i,
-    title: item.querySelector("title")?.textContent?.trim() ?? "",
-    link: item.querySelector("link")?.textContent?.trim() ?? "",
-    description: item.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").trim() ?? "",
-    pubDate: item.querySelector("pubDate")?.textContent ?? null,
-    source,
-  }));
+
+  // Handle both RSS <item> and Atom <entry> (YouTube uses Atom)
+  const items = Array.from(xml.querySelectorAll("item, entry"));
+
+  return items.map((item, i) => {
+    const title = item.querySelector("title")?.textContent?.trim() ?? "";
+    // YouTube Atom feeds use <link href="..."> instead of <link>text</link>
+    const link =
+      item.querySelector("link")?.getAttribute("href") ||
+      item.querySelector("link")?.textContent?.trim() ||
+      "";
+    const description =
+      item.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").trim() ||
+      item.querySelector("summary")?.textContent?.replace(/<[^>]+>/g, "").trim() ||
+      item.querySelector("media\\:description")?.textContent?.trim() ||
+      "";
+    const pubDate =
+      item.querySelector("pubDate")?.textContent ||
+      item.querySelector("published")?.textContent ||
+      item.querySelector("updated")?.textContent ||
+      null;
+
+    return { i, title, link, description, pubDate, source };
+  });
 }
 
 export async function fetchArsenalNews(contentType?: string): Promise<ContentItem[]> {
@@ -110,15 +128,21 @@ export async function fetchArsenalNews(contentType?: string): Promise<ContentIte
 
   const sources = contentType ? RSS_SOURCES.filter(s => s.type === contentType) : RSS_SOURCES;
   const results = await Promise.allSettled(sources.map(fetchRSSItems));
+
   const items = results
     .filter((r): r is PromiseFulfilledResult<any[]> => r.status === "fulfilled")
     .flatMap(r => r.value)
-    .filter(({ title, description }) => (title + description).toLowerCase().includes("arsenal"))
+    .filter(({ title, description, source }) => {
+      // For video/podcast, include all items from Arsenal-specific channels
+      if (source.type === "video" || source.type === "podcast") return true;
+      // For news/blog, filter for Arsenal mentions
+      return (title + description).toLowerCase().includes("arsenal");
+    })
     .map(({ i, title, link, description, pubDate, source }) => ({
       contentId: `${source.name}-${i}-${Date.now()}`,
       title,
       summary: description.slice(0, 200) + (description.length > 200 ? "..." : ""),
-      durationLabel: estimateDuration(description),
+      durationLabel: source.type === "video" ? "Video" : estimateDuration(description),
       sourceUrl: link,
       sourceName: source.name,
       sourceCountry: source.country,
