@@ -54,9 +54,8 @@ const RSS_SOURCES = [
   { url: "https://goonerdaily.com/feed", name: "Gooner Daily", country: "England", type: "blog" },
   { url: "https://arseblog.com/category/arsecast/feed/", name: "Arsecast", country: "England", type: "podcast" },
   { url: "https://feeds.feedburner.com/HandbrakeFc", name: "Handbrake FC", country: "England", type: "podcast" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCmDTnDfLBnCMkRKFBgDbZsA", name: "Arsenal FC Official", country: "England", type: "video" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UC_dJLZU3fRb89B03cFHQVdA", name: "AFTV", country: "England", type: "video" },
-  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCEFHn_bMcTkFkKhFpEFkWAw", name: "Arsenal Highlights", country: "England", type: "video" },
+  { url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCpryVRk_VDudG8SHXgWcG0w", name: "Arsenal FC Official", country: "England", type: "video" },
+{ url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCBTy8j2cPy6zw68godcE7MQ", name: "AFTV", country: "England", type: "video" },
 ];
 
 const TRANSFER_SOURCES = [
