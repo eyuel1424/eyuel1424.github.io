@@ -1386,3 +1386,109 @@ a.usa-nav__link.usa-current {
 .not-found__btn {
   display: inline-block;
 }
+/* ===== LIGHT MODE OVERRIDES ===== */
+[data-theme="light"] body,
+[data-theme="light"] {
+  background-color: #f5f5f5 !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .usa-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+[data-theme="light"] .usa-nav__link,
+[data-theme="light"] .header-logo-link {
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .usa-section,
+[data-theme="light"] .grid-container {
+  background-color: #f5f5f5 !important;
+}
+
+[data-theme="light"] .welcome-banner {
+  background: linear-gradient(135deg, #e8f0fe, #dbeafe) !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .welcome-banner__title,
+[data-theme="light"] .welcome-banner__text {
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .usa-card__container {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+}
+
+[data-theme="light"] .usa-card__body {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .audio-summary {
+  background: linear-gradient(135deg, #e8f0fe, #dbeafe) !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .filter-chip {
+  background-color: #e5e7eb !important;
+  color: #1a1a2e !important;
+  border-color: #d1d5db !important;
+}
+
+[data-theme="light"] .filter-chip--active {
+  background-color: #EF0107 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .subscribe-bar {
+  background-color: #1a1a2e !important;
+}
+
+[data-theme="light"] .digest-cta {
+  background-color: #1a1a2e !important;
+}
+
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="text"],
+[data-theme="light"] .usa-input,
+[data-theme="light"] .usa-select {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+  border-color: #d1d5db !important;
+}
+
+[data-theme="light"] .usa-table {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .usa-table thead {
+  background-color: #f3f4f6 !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .usa-table tr {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+[data-theme="light"] .recent-results__card {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+[data-theme="light"] .usa-alert--info {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+}
+
+[data-theme="light"] .usa-footer,
+[data-theme="light"] footer {
+  background-color: #1a1a2e !important;
+}
