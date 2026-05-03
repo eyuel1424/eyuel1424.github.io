@@ -3,21 +3,59 @@
 /* Dark theme for comfortable reading */
 
 :root {
-  --arsenal-red: #EF0107;
-  --arsenal-dark-red: #C1001F;
-  --arsenal-navy: #023474;
-  --arsenal-gold: #9C824A;
-  --bg-primary: #1A1A2E;
-  --bg-secondary: #16213E;
-  --bg-card: #1F2B47;
-  --bg-card-hover: #253352;
-  --bg-input: #253352;
-  --border-color: #2A3A5C;
-  --text-primary: #E8E8E8;
-  --text-secondary: #A0AEC0;
-  --text-heading: #FFFFFF;
-  --link-color: #73B3E7;
-  --link-hover: #EF4444;
+  --bg-primary: #0d1b2a;
+  --bg-secondary: #1e3a5f;
+  --text-primary: #ffffff;
+  --text-secondary: #9CA3AF;
+  --border-color: #1e3a5f;
+}
+
+html.theme-light,
+[data-theme="light"] {
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4b5563;
+  --border-color: #e5e7eb;
+}
+
+html.theme-light body,
+[data-theme="light"] body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+html.theme-light .usa-header,
+[data-theme="light"] .usa-header {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+html.theme-light .usa-nav__link,
+[data-theme="light"] .usa-nav__link {
+  color: #1a1a2e !important;
+}
+
+html.theme-light .welcome-banner,
+[data-theme="light"] .welcome-banner {
+  background: linear-gradient(135deg, #f0f4f8, #e2e8f0) !important;
+  color: #1a1a2e !important;
+}
+
+html.theme-light .usa-card__container,
+[data-theme="light"] .usa-card__container,
+html.theme-light [style*="background: #1e3a5f"],
+[data-theme="light"] [style*="background: #1e3a5f"],
+html.theme-light [style*="background: rgb(30, 58, 95)"],
+[data-theme="light"] [style*="background: rgb(30, 58, 95)"] {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+html.theme-light .subscribe-bar,
+[data-theme="light"] .subscribe-bar {
+  background-color: #1a1a2e !important;
 }
 
 /* Global */
