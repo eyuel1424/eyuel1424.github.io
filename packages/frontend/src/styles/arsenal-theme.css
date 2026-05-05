@@ -1559,3 +1559,10 @@ h2, h3, h4 {
 .usa-nav__link {
   font-weight: 400 !important;
 }
+.usa-current {
+  color: #EF0107 !important;
+  border-bottom: 3px solid #EF0107 !important;
+}
+.usa-nav__link:hover {
+  color: #EF0107 !important;
+}
