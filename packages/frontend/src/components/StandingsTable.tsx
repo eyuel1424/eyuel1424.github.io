@@ -1,87 +1,106 @@
 import React, { useEffect, useState } from "react";
-import { fetchPremierLeagueStandings, Standing } from "../services/footballService";
-import { TopScorers } from "./TopScorers";
+import { fetchPremierLeagueStandings, fetchTopScorers, Standing, Scorer } from "../services/footballService";
 
-function FormIndicator({ form }: { form: string[] }) {
+function FormBadge({ result }: { result: string }) {
+  const colors: Record<string, string> = { W: "#2E8540", D: "#9C824A", L: "#EF0107" };
   return (
-    <span>
-      {form.slice(0, 5).map((result, i) => {
-        const color = result === "W" ? "green" : result === "D" ? "gold" : "red";
-        return (
-          <span key={i} style={{
-            display: "inline-block", width: "1.2em", height: "1.2em",
-            lineHeight: "1.2em", textAlign: "center", borderRadius: "2px",
-            backgroundColor: color, color: "white", fontSize: "0.75em",
-            marginRight: "2px", fontWeight: "bold",
-          }}>
-            {result}
-          </span>
-        );
-      })}
+    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "22px", height: "22px", borderRadius: "4px", background: colors[result] ?? "#333", color: "white", fontSize: "0.7rem", fontWeight: "800", margin: "0 1px" }}>
+      {result}
     </span>
   );
 }
 
 export function StandingsTable() {
   const [standings, setStandings] = useState<Standing[]>([]);
+  const [scorers, setScorers] = useState<Scorer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    fetchPremierLeagueStandings()
-      .then(data => { setStandings(data); setLoading(false); })
-      .catch(() => { setError("Unable to load standings."); setLoading(false); });
+    Promise.allSettled([fetchPremierLeagueStandings(), fetchTopScorers()])
+      .then(([s, sc]) => {
+        if (s.status === "fulfilled") setStandings(s.value);
+        if (sc.status === "fulfilled") setScorers(sc.value);
+        setLoading(false);
+      });
   }, []);
 
+  const displayed = showAll ? standings : standings.slice(0, 20);
+
   return (
-    <section aria-label="League standings">
-      <h2 className="usa-heading">Premier League Standings</h2>
+    <section aria-label="League standings" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+      <h2 style={{ fontSize: "1.4rem", fontWeight: "800", letterSpacing: "0.05em", textTransform: "uppercase", borderBottom: "3px solid #EF0107", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>
+        Premier League Standings
+      </h2>
       {loading && <p>Loading standings...</p>}
-      {error && <p style={{ color: "#EF0107" }}>{error}</p>}
-      {!loading && !error && standings.length === 0 && <p>No standings available.</p>}
-      {standings.length > 0 && (
-        <table className="usa-table" aria-label="Premier League standings">
-          <thead>
-            <tr>
-              <th scope="col">Pos</th>
-              <th scope="col">Team</th>
-              <th scope="col">P</th>
-              <th scope="col">W</th>
-              <th scope="col">D</th>
-              <th scope="col">L</th>
-              <th scope="col">GF</th>
-              <th scope="col">GA</th>
-              <th scope="col">GD</th>
-              <th scope="col">Pts</th>
-              <th scope="col">Form</th>
-            </tr>
-          </thead>
-          <tbody>
-            {standings.map((entry) => (
-              <tr
-                key={entry.position}
-                className={entry.teamName.includes("Arsenal") ? "bg-red-warm-10v" : ""}
-              >
-                <td>{entry.position}</td>
-                <td style={{ fontWeight: entry.teamName.includes("Arsenal") ? "bold" : "normal" }}>
-                  {entry.teamName}
-                </td>
-                <td>{entry.matchesPlayed}</td>
-                <td>{entry.wins}</td>
-                <td>{entry.draws}</td>
-                <td>{entry.losses}</td>
-                <td>{entry.goalsFor}</td>
-                <td>{entry.goalsAgainst}</td>
-                <td>{entry.goalDifference}</td>
-                <td style={{ fontWeight: "bold" }}>{entry.points}</td>
-                <td><FormIndicator form={entry.recentForm} /></td>
+      {!loading && standings.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #EF0107" }}>
+                {["#", "Team", "P", "W", "D", "L", "GF", "GA", "GD", "Pts", "Form"].map(h => (
+                  <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h === "Team" ? "left" : "center", color: "#9CA3AF", fontWeight: "700", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {displayed.map((entry, i) => {
+                const isArsenal = entry.teamName.includes("Arsenal");
+                return (
+                  <tr key={entry.position} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: isArsenal ? "rgba(239,1,7,0.1)" : i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", transition: "background 0.2s" }}>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", color: "#9CA3AF", fontWeight: "600" }}>{entry.position}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", fontWeight: isArsenal ? "800" : "500", color: isArsenal ? "#EF0107" : "inherit" }}>
+                      {entry.teamName.replace(" FC", "").replace(" United", " Utd")}
+                    </td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{entry.matchesPlayed}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{entry.wins}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{entry.draws}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{entry.losses}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{entry.goalsFor}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{entry.goalsAgainst}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", color: entry.goalDifference > 0 ? "#2E8540" : entry.goalDifference < 0 ? "#EF0107" : "inherit" }}>{entry.goalDifference > 0 ? `+${entry.goalDifference}` : entry.goalDifference}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", fontWeight: "800", color: isArsenal ? "#EF0107" : "inherit" }}>{entry.points}</td>
+                    <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>
+                      <div style={{ display: "flex", justifyContent: "center", gap: "1px" }}>
+                        {(entry.recentForm ?? []).slice(0, 5).map((r, i) => <FormBadge key={i} result={r} />)}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
-      <h2 className="usa-heading" style={{ marginTop: "2rem" }}>Top Scorers</h2>
-      <TopScorers />
+
+      <h2 style={{ fontSize: "1.4rem", fontWeight: "800", letterSpacing: "0.05em", textTransform: "uppercase", borderBottom: "3px solid #EF0107", paddingBottom: "0.5rem", margin: "2rem 0 1.5rem 0" }}>
+        Top Scorers
+      </h2>
+      {!loading && scorers.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #EF0107" }}>
+                {["#", "Player", "Team", "Apps", "Goals", "Assists"].map(h => (
+                  <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h === "Player" || h === "Team" ? "left" : "center", color: "#9CA3AF", fontWeight: "700", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {scorers.slice(0, 10).map((s, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: s.isArsenal ? "rgba(239,1,7,0.1)" : i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
+                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", color: "#9CA3AF", fontWeight: "600" }}>{i + 1}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", fontWeight: s.isArsenal ? "800" : "500", color: s.isArsenal ? "#EF0107" : "inherit" }}>{s.playerName}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", color: "#9CA3AF" }}>{s.teamName.replace(" FC", "")}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{s.matchesPlayed}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", fontWeight: "800", color: s.isArsenal ? "#EF0107" : "inherit" }}>{s.goals}</td>
+                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>{s.assists}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
