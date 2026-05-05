@@ -63,7 +63,7 @@ export function ContentFeed() {
       <div className="welcome-banner">
         <h2 className="welcome-banner__title">Your Daily Arsenal Fix</h2>
         <p className="welcome-banner__text">
-          News, transfers, podcasts, and blogs from {items.length}+ sources worldwide. Updated every 15 minutes.
+          News, transfers, podcasts, and blogs from {items.length > 0 ? items.length : "25"}+ articles worldwide.
         </p>
         {lastUpdated && (
           <span className="welcome-banner__updated" aria-label="Last updated">

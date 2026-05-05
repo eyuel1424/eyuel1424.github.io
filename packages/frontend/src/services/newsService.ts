@@ -47,6 +47,14 @@ const RSS_SOURCES = [
   { url: "https://www.skysports.com/rss/12040", name: "Sky Sports", country: "England", type: "news" },
   { url: "https://www.theguardian.com/football/arsenal/rss", name: "The Guardian", country: "England", type: "news" },
   { url: "https://www.espn.com/espn/rss/soccer/news", name: "ESPN FC", country: "USA", type: "news" },
+  { url: "https://www.goal.com/feeds/en/news", name: "Goal.com", country: "Global", type: "news" },
+  { url: "https://www.fourfourtwo.com/rss", name: "FourFourTwo", country: "England", type: "news" },
+  { url: "https://www.90min.com/feeds/latest", name: "90min", country: "Global", type: "news" },
+  { url: "https://www.sportbible.com/rss.xml", name: "SportBible", country: "Global", type: "news" },
+  { url: "https://feeds.feedburner.com/goal/ZDpz", name: "Goal Africa", country: "Africa", type: "news" },
+  { url: "https://www.supersport.com/rss/football", name: "SuperSport", country: "Africa", type: "news" },
+  { url: "https://sportstar.thehindu.com/football/feed", name: "Sportstar India", country: "Asia", type: "news" },
+  { url: "https://www.foxsports.com.au/rss", name: "Fox Sports Australia", country: "Australia", type: "news" },
   { url: "https://arseblog.com/feed/", name: "Arseblog", country: "England", type: "blog" },
   { url: "https://www.justarsenal.com/feed", name: "Just Arsenal", country: "England", type: "blog" },
   { url: "https://paininthearsenal.com/feed", name: "Pain in the Arsenal", country: "England", type: "blog" },
@@ -54,6 +62,9 @@ const RSS_SOURCES = [
   { url: "https://goonerdaily.com/feed", name: "Gooner Daily", country: "England", type: "blog" },
   { url: "https://arseblog.com/category/arsecast/feed/", name: "Arsecast", country: "England", type: "podcast" },
   { url: "https://feeds.feedburner.com/HandbrakeFc", name: "Handbrake FC", country: "England", type: "podcast" },
+  { url: "https://www.thearsenalist.com/feed", name: "The Arsenalist", country: "Canada", type: "podcast" },
+  { url: "https://feeds.buzzsprout.com/1711422.rss", name: "Gooner Talk", country: "England", type: "podcast" },
+  { url: "https://feeds.buzzsprout.com/996946.rss", name: "Arsenal Vision", country: "England", type: "podcast" },
 ];
 
 const TRANSFER_SOURCES = [
@@ -64,99 +75,18 @@ const TRANSFER_SOURCES = [
   { url: "https://paininthearsenal.com/feed", name: "Pain in the Arsenal", country: "England" },
   { url: "https://www.justarsenal.com/feed", name: "Just Arsenal", country: "England" },
   { url: "https://le-grove.co.uk/feed", name: "Le Grove", country: "England" },
+  { url: "https://www.goal.com/feeds/en/news", name: "Goal.com", country: "Global" },
 ];
 
 const TRANSFER_KEYWORDS = ["transfer", "sign", "signing", "deal", "loan", "depart", "exit", "bid", "fee", "contract", "extension", "rumour", "rumor", "target", "move", "linked", "interest", "window", "summer", "january"];
 
 const ARSENAL_VIDEOS: ContentItem[] = [
-  {
-    contentId: "video-official-channel",
-    title: "Arsenal FC - Official YouTube Channel",
-    summary: "Watch the latest Arsenal FC match highlights, behind the scenes content, player interviews, training sessions and more on the official Arsenal YouTube channel.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/@Arsenal",
-    sourceName: "Arsenal FC Official",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date().toISOString(),
-  },
-  {
-    contentId: "video-fulham-highlights",
-    title: "Arsenal 3-0 Fulham - Match Highlights",
-    summary: "Viktor Gyokeres scores twice as Arsenal destroy Fulham 3-0 to go six points clear at the top of the Premier League. Watch the full match highlights.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+Fulham+3-0+highlights+2026",
-    sourceName: "Arsenal FC Official",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    contentId: "video-atletico-highlights",
-    title: "Arsenal vs Atletico Madrid - Champions League Semi Final",
-    summary: "Watch the highlights from Arsenal's UEFA Champions League semi-final clash against Atletico Madrid at the Emirates Stadium.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+Atletico+Madrid+Champions+League+semi+final+2026",
-    sourceName: "Arsenal FC Official",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    contentId: "video-newcastle-highlights",
-    title: "Arsenal 1-0 Newcastle - Match Highlights",
-    summary: "Arsenal beat Newcastle United 1-0 in the Premier League. Watch all the action from the Emirates.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+Newcastle+1-0+highlights+2026",
-    sourceName: "Arsenal FC Official",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    contentId: "video-aftv",
-    title: "AFTV - Arsenal Fan TV Reactions & Analysis",
-    summary: "The largest Arsenal fan channel. Passionate fan reactions, match previews, post-match interviews and all things Arsenal from the fans perspective.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/@AFTVMedia",
-    sourceName: "AFTV",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    contentId: "video-training",
-    title: "Arsenal Training - Pre-Match Preparation",
-    summary: "Go behind the scenes as Arsenal prepare for their next match. Watch training drills, player warm-ups and Mikel Arteta's tactical sessions.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+training+2026",
-    sourceName: "Arsenal FC Official",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    contentId: "video-gyokeres-goals",
-    title: "Viktor Gyokeres - All Goals & Assists for Arsenal",
-    summary: "Watch every goal and assist from Viktor Gyokeres since joining Arsenal. The Swedish striker has been in sensational form for the Gunners.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/results?search_query=Viktor+Gyokeres+Arsenal+goals+2026",
-    sourceName: "Arsenal FC Official",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    contentId: "video-latest-highlights",
-    title: "Arsenal Latest Highlights - YouTube",
-    summary: "Find all the latest Arsenal match highlights, goals, saves and more on YouTube. Updated after every Arsenal match.",
-    durationLabel: "Video",
-    sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+highlights+2026",
-    sourceName: "YouTube",
-    sourceCountry: "England",
-    contentType: "video",
-    publicationDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+  { contentId: "video-official-channel", title: "Arsenal FC - Official YouTube Channel", summary: "Watch the latest Arsenal FC match highlights, behind the scenes content, player interviews, training sessions and more on the official Arsenal YouTube channel.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/@Arsenal", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date().toISOString() },
+  { contentId: "video-fulham-highlights", title: "Arsenal 3-0 Fulham - Match Highlights", summary: "Viktor Gyokeres scores twice as Arsenal destroy Fulham 3-0 to go six points clear at the top of the Premier League.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+Fulham+3-0+highlights+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+  { contentId: "video-atletico-highlights", title: "Arsenal vs Atletico Madrid - Champions League Semi Final", summary: "Watch the highlights from Arsenal's UEFA Champions League semi-final clash against Atletico Madrid at the Emirates Stadium.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+Atletico+Madrid+Champions+League+semi+final+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+  { contentId: "video-aftv", title: "AFTV - Arsenal Fan TV Reactions & Analysis", summary: "The largest Arsenal fan channel. Passionate fan reactions, match previews, post-match interviews and all things Arsenal.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/@AFTVMedia", sourceName: "AFTV", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+  { contentId: "video-training", title: "Arsenal Training - Pre-Match Preparation", summary: "Go behind the scenes as Arsenal prepare for their next match. Watch training drills and Mikel Arteta's tactical sessions.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+training+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
+  { contentId: "video-gyokeres", title: "Viktor Gyokeres - All Goals & Assists for Arsenal", summary: "Watch every goal and assist from Viktor Gyokeres since joining Arsenal. The Swedish striker has been in sensational form.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Viktor+Gyokeres+Arsenal+goals+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
 ];
 
 function parseRSSDate(dateStr: string | null): string | undefined {
@@ -186,19 +116,9 @@ async function fetchRSSItems(source: { url: string; name: string; country: strin
   const items = Array.from(xml.querySelectorAll("item, entry"));
   return items.map((item, i) => {
     const title = item.querySelector("title")?.textContent?.trim() ?? "";
-    const link =
-      item.querySelector("link")?.getAttribute("href") ||
-      item.querySelector("link")?.textContent?.trim() ||
-      "";
-    const description =
-      item.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").trim() ||
-      item.querySelector("summary")?.textContent?.replace(/<[^>]+>/g, "").trim() ||
-      "";
-    const pubDate =
-      item.querySelector("pubDate")?.textContent ||
-      item.querySelector("published")?.textContent ||
-      item.querySelector("updated")?.textContent ||
-      null;
+    const link = item.querySelector("link")?.getAttribute("href") || item.querySelector("link")?.textContent?.trim() || "";
+    const description = item.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").trim() || item.querySelector("summary")?.textContent?.replace(/<[^>]+>/g, "").trim() || "";
+    const pubDate = item.querySelector("pubDate")?.textContent || item.querySelector("published")?.textContent || item.querySelector("updated")?.textContent || null;
     return { i, title, link, description, pubDate, source };
   });
 }
@@ -208,19 +128,15 @@ export async function fetchArsenalNews(contentType?: string): Promise<ContentIte
   const cached = getCached<ContentItem[]>(cacheKey);
   if (cached) return cached;
 
-  // Return curated video list for video tab
   if (contentType === "video") {
     setCache(cacheKey, ARSENAL_VIDEOS);
     return ARSENAL_VIDEOS;
   }
 
-  const sources = contentType
-    ? RSS_SOURCES.filter(s => s.type === contentType)
-    : RSS_SOURCES;
-
+  const sources = contentType ? RSS_SOURCES.filter(s => s.type === contentType) : RSS_SOURCES;
   const results = await Promise.allSettled(sources.map(fetchRSSItems));
 
-  const items = results
+  let items = results
     .filter((r): r is PromiseFulfilledResult<any[]> => r.status === "fulfilled")
     .flatMap(r => r.value)
     .filter(({ title, description, source }) => {
@@ -244,7 +160,16 @@ export async function fetchArsenalNews(contentType?: string): Promise<ContentIte
       return dB - dA;
     });
 
-  // For "all" tab, also include videos
+  // Limit podcasts to max 5 per source
+  if (contentType === "podcast" || !contentType) {
+    const podcastCount: Record<string, number> = {};
+    items = items.filter(item => {
+      if (item.contentType !== "podcast") return true;
+      podcastCount[item.sourceName] = (podcastCount[item.sourceName] || 0) + 1;
+      return podcastCount[item.sourceName] <= 5;
+    });
+  }
+
   if (!contentType) {
     const allItems = [...ARSENAL_VIDEOS, ...items].sort((a, b) => {
       const dA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0;
