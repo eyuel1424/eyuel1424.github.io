@@ -1,9 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script>
-  var path = window.location.pathname.replace('/London49', '');
-  window.location.replace('/London49/' + '#' + path);
-</script>
+  <meta charset="utf-8">
+  <title>Arsenal News</title>
+  <script>
+    var segmentCount = 1;
+    var l = window.location;
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?p=/' +
+      l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
+  </script>
 </head>
 </html>
