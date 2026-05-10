@@ -189,7 +189,7 @@ export async function fetchArsenalNews(contentType?: string): Promise<ContentIte
       return combined.includes("arsenal");
     })
     .map(({ i, title, link, description, pubDate, source }) => ({
-      contentId: `${source.name}-${i}-${Date.now()}`,
+      contentId: `${source.name}-${i}-${source.type}`,
       title,
       summary: description.slice(0, 200) + (description.length > 200 ? "..." : ""),
       durationLabel: source.type === "podcast" ? "Podcast" : estimateDuration(description),
