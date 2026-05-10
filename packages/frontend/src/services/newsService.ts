@@ -41,6 +41,7 @@ export interface TransferItem {
 }
 
 const PROXY = "https://arsenal-proxy.eyuelkt.workers.dev/rss?url=";
+const WOMEN_KEYWORDS = ["wsl", "women", "russo", "uwcl", "women's super league", "women's champions league"];
 
 const RSS_SOURCES = [
   { url: "https://feeds.bbci.co.uk/sport/football/rss.xml", name: "BBC Sport", country: "England", type: "news" },
@@ -168,16 +169,24 @@ export async function fetchArsenalNews(contentType?: string): Promise<ContentIte
     return ARSENAL_VIDEOS;
   }
 
-  const sources = contentType ? RSS_SOURCES.filter(s => s.type === contentType) : RSS_SOURCES;
+  const sources = contentType === "women"
+    ? RSS_SOURCES.filter(s => s.type === "women" || s.type === "news")
+    : contentType
+    ? RSS_SOURCES.filter(s => s.type === contentType)
+    : RSS_SOURCES;
   const results = await Promise.allSettled(sources.map(fetchRSSItems));
 
   let items: ContentItem[] = results
     .filter((r): r is PromiseFulfilledResult<any[]> => r.status === "fulfilled")
     .flatMap(r => r.value)
     .filter(({ title, description, source }) => {
+      const combined = (title + description).toLowerCase();
       if (source.type === "podcast") return true;
-      if (source.type === "women") return (title + description).toLowerCase().includes("arsenal");
-      return (title + description).toLowerCase().includes("arsenal");
+      if (contentType === "women") {
+        return combined.includes("arsenal") && WOMEN_KEYWORDS.some(k => combined.includes(k));
+      }
+      if (source.type === "women") return combined.includes("arsenal");
+      return combined.includes("arsenal");
     })
     .map(({ i, title, link, description, pubDate, source }) => ({
       contentId: `${source.name}-${i}-${Date.now()}`,
