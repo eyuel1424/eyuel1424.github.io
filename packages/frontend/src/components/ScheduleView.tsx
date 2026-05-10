@@ -1,257 +1,339 @@
-const CACHE_TTL_MS = 15 * 60 * 1000;
+import React, { useEffect, useState, useRef } from "react";
+import { fetchArsenalFixtures, fetchArsenalResults, Match } from "../services/footballService";
+import { InjuryReport } from "./InjuryReport";
 
-function getCached<T>(key: string): T | null {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const { data, timestamp } = JSON.parse(raw);
-    if (Date.now() - timestamp > CACHE_TTL_MS) return null;
-    return data as T;
-  } catch { return null; }
+// ─────────────────────────────────────────────
+// LIVE COMMENTARY
+// ─────────────────────────────────────────────
+
+interface CommentaryEvent {
+  minute: number | null;
+  type: "goal" | "yellow_card" | "red_card" | "substitution" | "kick_off" | "half_time" | "full_time" | "info";
+  text: string;
+  timestamp: number;
 }
 
-function setCache<T>(key: string, data: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
-  } catch {}
+interface LiveMatch {
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  status: string;
+  minute?: number;
 }
 
-export interface ContentItem {
-  contentId: string;
-  title: string;
-  summary: string;
-  durationLabel: string;
-  sourceUrl: string;
-  sourceName: string;
-  sourceCountry: string;
-  contentType: string;
-  publicationDate?: string;
+const EVENT_ICONS: Record<CommentaryEvent["type"], string> = {
+  goal: "⚽",
+  yellow_card: "🟨",
+  red_card: "🟥",
+  substitution: "🔄",
+  kick_off: "🏁",
+  half_time: "☕",
+  full_time: "🏆",
+  info: "📋",
+};
+
+const PROXY_BASE = "https://arsenal-proxy.eyuelkt.workers.dev";
+const POLL_INTERVAL = 30_000;
+
+function mapEventType(type: string): CommentaryEvent["type"] {
+  const t = (type ?? "").toLowerCase();
+  if (t.includes("goal")) return "goal";
+  if (t.includes("yellow")) return "yellow_card";
+  if (t.includes("red")) return "red_card";
+  if (t.includes("sub")) return "substitution";
+  return "info";
 }
 
-export interface TransferItem {
-  contentId: string;
-  title: string;
-  summary: string;
-  sourceUrl: string;
-  sourceName: string;
-  sourceCountry: string;
-  transferType: string;
-  publicationDate: string;
-  durationLabel: string;
+function mapStatusToEvent(status: string): CommentaryEvent["type"] {
+  if (status === "IN_PLAY") return "kick_off";
+  if (status === "PAUSED") return "half_time";
+  if (status === "FINISHED") return "full_time";
+  return "info";
 }
 
-const PROXY = "https://arsenal-proxy.eyuelkt.workers.dev/rss?url=";
-
-const RSS_SOURCES = [
-  { url: "https://feeds.bbci.co.uk/sport/football/rss.xml", name: "BBC Sport", country: "England", type: "news" },
-  { url: "https://www.skysports.com/rss/12040", name: "Sky Sports", country: "England", type: "news" },
-  { url: "https://www.theguardian.com/football/arsenal/rss", name: "The Guardian", country: "England", type: "news" },
-  { url: "https://www.espn.com/espn/rss/soccer/news", name: "ESPN FC", country: "USA", type: "news" },
-  { url: "https://www.goal.com/feeds/en/news", name: "Goal.com", country: "Global", type: "news" },
-  { url: "https://www.fourfourtwo.com/rss", name: "FourFourTwo", country: "England", type: "news" },
-  { url: "https://www.90min.com/feeds/latest", name: "90min", country: "Global", type: "news" },
-  { url: "https://www.supersport.com/rss/football", name: "SuperSport", country: "Africa", type: "news" },
-  { url: "https://sportstar.thehindu.com/football/feed", name: "Sportstar India", country: "Asia", type: "news" },
-  { url: "https://en.africatopsports.com/feed", name: "Africa Top Sports", country: "Africa", type: "news" },
-  { url: "https://www.futaa.com/rss/football", name: "Futaa", country: "Africa", type: "news" },
-  { url: "https://www.marca.com/en/football/arsenal/rss.html", name: "Marca", country: "Spain", type: "news" },
-  { url: "https://www.goal.com/pt-br/feeds/news", name: "Goal Brasil", country: "Brazil", type: "news" },
-  { url: "https://www.tycsports.com/rss", name: "TyC Sports", country: "Argentina", type: "news" },
-  { url: "https://arseblog.com/feed/", name: "Arseblog", country: "England", type: "blog" },
-  { url: "https://www.justarsenal.com/feed", name: "Just Arsenal", country: "England", type: "blog" },
-  { url: "https://paininthearsenal.com/feed", name: "Pain in the Arsenal", country: "England", type: "blog" },
-  { url: "https://le-grove.co.uk/feed", name: "Le Grove", country: "England", type: "blog" },
-  { url: "https://goonerdaily.com/feed", name: "Gooner Daily", country: "England", type: "blog" },
-  { url: "https://arseblog.com/category/arsecast/feed/", name: "Arsecast", country: "England", type: "podcast" },
-  { url: "https://feeds.acast.com/public/shows/handbrake-off-the-athletic-fc-s-arsenal-show", name: "Handbrake Off", country: "England", type: "podcast" },
-  { url: "https://feeds.simplecast.com/UA_OfDYj", name: "ArsenalVision", country: "USA", type: "podcast" },
-  { url: "https://feeds.buzzsprout.com/1711422.rss", name: "Gooner Talk", country: "England", type: "podcast" },
-  { url: "https://arseblog.com/category/arsenal-women-arsecast/feed/", name: "Arsenal Women Arsecast", country: "England", type: "podcast" },
-  { url: "https://www.theguardian.com/football/arsenal-women/rss", name: "Guardian Women", country: "England", type: "women" },
-  { url: "https://www.skysports.com/rss/12040", name: "Sky Sports Women", country: "England", type: "women" },
-  { url: "https://arseblog.com/category/arsenal-women/feed/", name: "Arseblog Women", country: "England", type: "women" },
-  { url: "https://www.justarsenal.com/category/arsenal-women/feed", name: "Just Arsenal Women", country: "England", type: "women" },
-  { url: "https://feeds.bbci.co.uk/sport/women-s-football/rss.xml", name: "BBC Women's Football", country: "England", type: "women" },
-];
-
-const TRANSFER_SOURCES = [
-  { url: "https://www.skysports.com/rss/12040", name: "Sky Sports", country: "England" },
-  { url: "https://feeds.bbci.co.uk/sport/football/rss.xml", name: "BBC Sport", country: "England" },
-  { url: "https://www.theguardian.com/football/transfers/rss", name: "The Guardian", country: "England" },
-  { url: "https://arseblog.com/feed/", name: "Arseblog", country: "England" },
-  { url: "https://paininthearsenal.com/feed", name: "Pain in the Arsenal", country: "England" },
-  { url: "https://www.justarsenal.com/feed", name: "Just Arsenal", country: "England" },
-  { url: "https://www.goal.com/feeds/en/news", name: "Goal.com", country: "Global" },
-];
-
-const TRANSFER_KEYWORDS = [
-  "transfer", "sign", "signing", "deal", "loan", "depart", "exit", "bid",
-  "fee", "contract", "extension", "rumour", "rumor", "target", "move",
-  "linked", "interest", "window", "summer", "january",
-];
-
-const ARSENAL_VIDEOS: ContentItem[] = [
-  { contentId: "video-official-channel", title: "Arsenal FC - Official YouTube Channel", summary: "Watch the latest Arsenal FC match highlights, behind the scenes content, player interviews, training sessions and more on the official Arsenal YouTube channel.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/@Arsenal", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date().toISOString() },
-  { contentId: "video-ucl-highlights", title: "Arsenal vs PSG - Champions League Final Preview", summary: "Arsenal face PSG in the UEFA Champions League Final. Watch all the build-up, analysis and highlights from their semi-final victory.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+PSG+Champions+League+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-  { contentId: "video-atletico-highlights", title: "Arsenal vs Atletico Madrid - Champions League Semi Final", summary: "Watch the highlights from Arsenal's UEFA Champions League semi-final clash against Atletico Madrid at the Emirates Stadium.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+Atletico+Madrid+Champions+League+semi+final+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-  { contentId: "video-aftv", title: "AFTV - Arsenal Fan TV Reactions & Analysis", summary: "The largest Arsenal fan channel. Passionate fan reactions, match previews, post-match interviews and all things Arsenal.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/@AFTVMedia", sourceName: "AFTV", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-  { contentId: "video-gyokeres", title: "Viktor Gyokeres - All Goals & Assists for Arsenal", summary: "Watch every goal and assist from Viktor Gyokeres since joining Arsenal. The Swedish striker has been in sensational form.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Viktor+Gyokeres+Arsenal+goals+2026", sourceName: "Arsenal FC Official", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-  { contentId: "video-latest", title: "Arsenal Latest Highlights & Goals 2026", summary: "Find all the latest Arsenal match highlights, goals, saves and more on YouTube. Updated after every Arsenal match.", durationLabel: "Video", sourceUrl: "https://www.youtube.com/results?search_query=Arsenal+highlights+2026", sourceName: "YouTube", sourceCountry: "England", contentType: "video", publicationDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() },
-];
-
-// ── DEDUPLICATION ────────────────────────────────────────────
-// Builds an 8-word fingerprint from the normalised title.
-// Two articles are considered duplicates if their fingerprints match,
-// regardless of source — catches cross-syndicated stories.
-function titleFingerprint(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")   // strip punctuation
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ")
-    .slice(0, 8)                    // first 8 words
-    .join(" ");
+function buildStatusText(m: LiveMatch): string {
+  if (m.status === "IN_PLAY") return `Match underway — ${m.homeTeam} vs ${m.awayTeam}`;
+  if (m.status === "PAUSED") return `Half time — ${m.homeTeam} ${m.homeScore} - ${m.awayScore} ${m.awayTeam}`;
+  if (m.status === "FINISHED") return `Full time — ${m.homeTeam} ${m.homeScore} - ${m.awayScore} ${m.awayTeam}`;
+  return `${m.homeTeam} vs ${m.awayTeam}`;
 }
 
-function deduplicateByTitle<T extends { title: string }>(items: T[]): T[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const fp = titleFingerprint(item.title);
-    if (!fp || seen.has(fp)) return false;
-    seen.add(fp);
-    return true;
-  });
-}
-// ────────────────────────────────────────────────────────────
-
-function parseRSSDate(dateStr: string | null): string | undefined {
-  if (!dateStr) return undefined;
-  try { return new Date(dateStr).toISOString(); } catch { return undefined; }
+function buildEventText(e: any): string {
+  const min = e.minute ? `${e.minute}'` : "";
+  const player = e.player?.name || e.playerName || "";
+  const team = e.team?.shortName || e.team?.name || "";
+  if (e.type?.toLowerCase().includes("goal")) return `${min} ⚽ GOAL! ${player} (${team})`.trim();
+  if (e.type?.toLowerCase().includes("yellow")) return `${min} 🟨 Yellow card — ${player} (${team})`.trim();
+  if (e.type?.toLowerCase().includes("red")) return `${min} 🟥 Red card — ${player} (${team})`.trim();
+  if (e.type?.toLowerCase().includes("sub")) return `${min} 🔄 Sub: ${player} (${team})`.trim();
+  return `${min} ${player} ${team}`.trim();
 }
 
-function estimateDuration(text: string): string {
-  const mins = Math.max(1, Math.round(text.split(/\s+/).length / 200));
-  return `${mins} min read`;
-}
+function LiveCommentary() {
+  const [match, setMatch] = useState<LiveMatch | null>(null);
+  const [events, setEvents] = useState<CommentaryEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const prevScoreRef = useRef<string>("");
+  const feedRef = useRef<HTMLDivElement>(null);
+  const eventsRef = useRef<CommentaryEvent[]>([]);
 
-function guessTransferType(text: string): string {
-  const t = text.toLowerCase();
-  if (t.includes("loan")) return "loan";
-  if (t.includes("depart") || t.includes("exit") || t.includes("leav") || t.includes("sold") || t.includes("release")) return "departure";
-  if (t.includes("extension") || t.includes("renew")) return "contract_extension";
-  if (t.includes("sign") || t.includes("complet") || t.includes("confirmed") || t.includes("official") || t.includes("done deal")) return "confirmed_signing";
-  return "rumor";
-}
+  eventsRef.current = events;
 
-async function fetchRSSItems(source: { url: string; name: string; country: string; type?: string }): Promise<any[]> {
-  const res = await fetch(`${PROXY}${encodeURIComponent(source.url)}`);
-  if (!res.ok) return [];
-  const text = await res.text();
-  const xml = new DOMParser().parseFromString(text, "text/xml");
-  const items = Array.from(xml.querySelectorAll("item, entry"));
-  return items.map((item, i) => {
-    const title = item.querySelector("title")?.textContent?.trim() ?? "";
-    const link = item.querySelector("link")?.getAttribute("href") || item.querySelector("link")?.textContent?.trim() || "";
-    const description = item.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").trim() || item.querySelector("summary")?.textContent?.replace(/<[^>]+>/g, "").trim() || "";
-    const pubDate = item.querySelector("pubDate")?.textContent || item.querySelector("published")?.textContent || item.querySelector("updated")?.textContent || null;
-    return { i, title, link, description, pubDate, source };
-  });
-}
+  async function fetchLiveMatch() {
+    try {
+      const res = await fetch(`${PROXY_BASE}/live`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
 
-export async function fetchArsenalNews(contentType?: string): Promise<ContentItem[]> {
-  const cacheKey = `arsenal-news-${contentType ?? "all"}`;
-  const cached = getCached<ContentItem[]>(cacheKey);
-  if (cached) return cached;
+      if (data.match) {
+        const m: LiveMatch = {
+          homeTeam: data.match.homeTeam?.shortName || data.match.homeTeam?.name || "Home",
+          awayTeam: data.match.awayTeam?.shortName || data.match.awayTeam?.name || "Away",
+          homeScore: data.match.score?.fullTime?.home ?? data.match.score?.halfTime?.home ?? 0,
+          awayScore: data.match.score?.fullTime?.away ?? data.match.score?.halfTime?.away ?? 0,
+          status: data.match.status,
+          minute: data.match.minute,
+        };
 
-  if (contentType === "video") {
-    setCache(cacheKey, ARSENAL_VIDEOS);
-    return ARSENAL_VIDEOS;
+        const scoreKey = `${m.homeScore}-${m.awayScore}`;
+        if (prevScoreRef.current && prevScoreRef.current !== scoreKey) {
+          const [prevH, prevA] = prevScoreRef.current.split("-").map(Number);
+          const scoringTeam = m.homeScore > prevH ? m.homeTeam : m.awayTeam;
+          const isArsenal = scoringTeam.toLowerCase().includes("arsenal");
+          const goalEvent: CommentaryEvent = {
+            minute: m.minute ?? null,
+            type: "goal",
+            text: `${isArsenal ? "🔴 ARSENAL" : scoringTeam} GOAL! ${m.homeTeam} ${m.homeScore} - ${m.awayScore} ${m.awayTeam}`,
+            timestamp: Date.now(),
+          };
+          setEvents(prev => [goalEvent, ...prev].slice(0, 50));
+          setTimeout(() => feedRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 100);
+        }
+        prevScoreRef.current = scoreKey;
+        setMatch(m);
+
+        if (data.events?.length) {
+          const mapped: CommentaryEvent[] = data.events.map((e: any) => ({
+            minute: e.minute ?? null,
+            type: mapEventType(e.type),
+            text: buildEventText(e),
+            timestamp: Date.now(),
+          }));
+          setEvents(mapped.reverse());
+        } else if (eventsRef.current.length === 0) {
+          const seed: CommentaryEvent = {
+            minute: m.minute ?? null,
+            type: mapStatusToEvent(m.status),
+            text: buildStatusText(m),
+            timestamp: Date.now(),
+          };
+          setEvents([seed]);
+        }
+      } else {
+        setMatch(null);
+      }
+
+      setLastUpdated(new Date());
+      setError(null);
+    } catch {
+      setError("Could not load live data");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const sources = contentType ? RSS_SOURCES.filter(s => s.type === contentType) : RSS_SOURCES;
-  const results = await Promise.allSettled(sources.map(fetchRSSItems));
+  useEffect(() => {
+    fetchLiveMatch();
+    const interval = setInterval(fetchLiveMatch, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
 
-  let items: ContentItem[] = results
-    .filter((r): r is PromiseFulfilledResult<any[]> => r.status === "fulfilled")
-    .flatMap(r => r.value)
-    .filter(({ title, description, source }) => {
-      if (source.type === "podcast") return true;
-      if (source.type === "women") return (title + description).toLowerCase().includes("arsenal");
-      return (title + description).toLowerCase().includes("arsenal");
-    })
-    .map(({ i, title, link, description, pubDate, source }) => ({
-      contentId: `${source.name}-${i}-${Date.now()}`,
-      title,
-      summary: description.slice(0, 200) + (description.length > 200 ? "..." : ""),
-      durationLabel: source.type === "podcast" ? "Podcast" : estimateDuration(description),
-      sourceUrl: link,
-      sourceName: source.name,
-      sourceCountry: source.country,
-      contentType: source.type ?? "news",
-      publicationDate: parseRSSDate(pubDate),
-    }))
-    .sort((a, b) => {
-      const dA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0;
-      const dB = b.publicationDate ? new Date(b.publicationDate).getTime() : 0;
-      return dB - dA;
-    });
+  if (loading || !match) return null;
 
-  // Deduplicate using 8-word title fingerprint (catches cross-syndicated stories)
-  items = deduplicateByTitle(items);
+  const isLive = match.status === "IN_PLAY" || match.status === "PAUSED";
 
-  // Limit podcasts to max 5 per source
-  const podcastCount: Record<string, number> = {};
-  items = items.filter(item => {
-    if (item.contentType !== "podcast") return true;
-    podcastCount[item.sourceName] = (podcastCount[item.sourceName] || 0) + 1;
-    return podcastCount[item.sourceName] <= 5;
-  });
+  return (
+    <div className={`live-commentary${isLive ? " live-commentary--active" : ""}`}>
+      <div className="live-commentary__header">
+        <div className="live-badge-row">
+          {isLive && <span className="live-badge">● LIVE</span>}
+          {match.minute != null && <span className="live-minute">{match.minute}'</span>}
+        </div>
+        <h3 className="live-commentary__title">Match Commentary</h3>
+        {lastUpdated && (
+          <span className="live-updated">
+            Updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
 
-  if (!contentType) {
-    const allItems = deduplicateByTitle(
-      [...ARSENAL_VIDEOS, ...items].sort((a, b) => {
-        const dA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0;
-        const dB = b.publicationDate ? new Date(b.publicationDate).getTime() : 0;
-        return dB - dA;
-      })
-    );
-    setCache(cacheKey, allItems);
-    return allItems;
-  }
+      <div className="live-scoreboard">
+        <span className={`live-team${match.homeTeam.toLowerCase().includes("arsenal") ? " live-team--arsenal" : ""}`}>
+          {match.homeTeam}
+        </span>
+        <span className="live-score">{match.homeScore} — {match.awayScore}</span>
+        <span className={`live-team${match.awayTeam.toLowerCase().includes("arsenal") ? " live-team--arsenal" : ""}`}>
+          {match.awayTeam}
+        </span>
+      </div>
 
-  setCache(cacheKey, items);
-  return items;
+      {events.length > 0 && (
+        <div className="live-feed" ref={feedRef}>
+          {events.map((event, i) => (
+            <div key={`${event.timestamp}-${i}`} className={`live-event live-event--${event.type}`}>
+              <span className="live-event__icon">{EVENT_ICONS[event.type]}</span>
+              <span className="live-event__text">{event.text}</span>
+              {event.minute != null && (
+                <span className="live-event__minute">{event.minute}'</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && <p className="live-error">{error} — retrying…</p>}
+    </div>
+  );
 }
 
-export async function fetchArsenalTransfers(): Promise<TransferItem[]> {
-  const cacheKey = "arsenal-transfers";
-  const cached = getCached<TransferItem[]>(cacheKey);
-  if (cached) return cached;
+// ─────────────────────────────────────────────
+// SCHEDULE VIEW (original — unchanged)
+// ─────────────────────────────────────────────
 
-  const results = await Promise.allSettled(TRANSFER_SOURCES.map(fetchRSSItems));
-  const items: TransferItem[] = results
-    .filter((r): r is PromiseFulfilledResult<any[]> => r.status === "fulfilled")
-    .flatMap(r => r.value)
-    .filter(({ title, description }) => {
-      const combined = (title + description).toLowerCase();
-      return combined.includes("arsenal") && TRANSFER_KEYWORDS.some(k => combined.includes(k));
-    })
-    .map(({ i, title, link, description, pubDate, source }) => ({
-      contentId: `${source.name}-transfer-${i}-${Date.now()}`,
-      title,
-      summary: description.slice(0, 200) + (description.length > 200 ? "..." : ""),
-      durationLabel: estimateDuration(description),
-      sourceUrl: link,
-      sourceName: source.name,
-      sourceCountry: source.country,
-      transferType: guessTransferType(title + description),
-      publicationDate: parseRSSDate(pubDate) ?? new Date().toISOString(),
-    }))
-    .sort((a, b) => new Date(b.publicationDate).getTime() - new Date(a.publicationDate).getTime());
+const RESULT_COLORS = {
+  W: { bg: "#2E8540", label: "W" },
+  D: { bg: "#9C824A", label: "D" },
+  L: { bg: "#EF0107", label: "L" },
+};
 
-  // Deduplicate transfers with same fingerprint approach
-  const deduped = deduplicateByTitle(items);
-  setCache(cacheKey, deduped);
-  return deduped;
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function isWithin24Hours(dateStr: string): boolean {
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return diff > 0 && diff <= 24 * 60 * 60 * 1000;
+}
+
+function shortName(name: string): string {
+  return name.replace(" FC", "").replace(" United", " Utd").replace("Club Atletico de Madrid", "Atletico Madrid").replace("Club Atlético de Madrid", "Atletico Madrid");
+}
+
+function getMatchFact(opponent: string, competition: string): string {
+  const facts: Record<string, string> = {
+    "Atletico": "Arsenal have never lost to Atletico Madrid at the Emirates Stadium.",
+    "West Ham": "Arsenal have won their last 4 Premier League meetings against West Ham.",
+    "Burnley": "Arsenal have scored in each of their last 8 games against Burnley.",
+    "Crystal Palace": "Arsenal won the reverse fixture 5-0 at Selhurst Park this season.",
+    "Manchester City": "Title-deciding fixture — Arsenal lead City by 5 points.",
+    "Chelsea": "London derby — Arsenal have won 3 of the last 4 against Chelsea.",
+    "Liverpool": "Two title contenders clash — one of the biggest games of the season.",
+    "Tottenham": "North London Derby — Arsenal have won the last 3 meetings.",
+    "Bournemouth": "Arsenal have scored 3+ goals in their last 3 meetings with Bournemouth.",
+    "Brentford": "Arsenal are unbeaten in their last 5 games against Brentford.",
+    "Newcastle": "Arsenal beat Newcastle 1-0 in the reverse fixture at St James Park.",
+    "Aston Villa": "Arsenal vs Villa — a clash between two of the Premier League's best attacks.",
+    "Fulham": "Arsenal demolished Fulham 3-0 earlier this season.",
+    "Everton": "Arsenal have kept a clean sheet in 4 of their last 5 games against Everton.",
+  };
+  for (const [key, fact] of Object.entries(facts)) {
+    if (opponent.includes(key)) return fact;
+  }
+  if (competition.includes("Champions League")) return "Arsenal are chasing their first ever Champions League title!";
+  return "Arsenal are 6 points clear at the top — form of their lives!";
+}
+
+export function ScheduleView() {
+  const [fixtures, setFixtures] = useState<Match[]>([]);
+  const [results, setResults] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.allSettled([fetchArsenalFixtures(), fetchArsenalResults()])
+      .then(([fix, res]) => {
+        if (fix.status === "fulfilled") setFixtures(fix.value);
+        if (res.status === "fulfilled") setResults(res.value);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <section aria-label="Schedule and results" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+      <h2 style={{ fontSize: "1.4rem", fontWeight: "800", letterSpacing: "0.05em", textTransform: "uppercase", borderBottom: "3px solid #EF0107", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>
+        Schedule & Results
+      </h2>
+
+      {/* ── LIVE COMMENTARY — renders only when a match is live ── */}
+      <LiveCommentary />
+
+      {results.length > 0 && (
+        <div style={{ marginBottom: "2.5rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: "1rem" }}>Recent Results</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.85rem" }}>
+            {results.map((r) => {
+              const resultKey = r.result as "W" | "D" | "L" | undefined;
+              const rs = resultKey ? RESULT_COLORS[resultKey] : RESULT_COLORS.D;
+              const isHome = r.homeTeam.includes("Arsenal");
+              const opponent = shortName(isHome ? r.awayTeam : r.homeTeam);
+              return (
+                <div key={r.matchId} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "12px", padding: "1rem", textAlign: "center", borderTop: `3px solid ${rs.bg}`, backdropFilter: "blur(4px)" }}>
+                  <span style={{ background: rs.bg, color: "white", padding: "3px 14px", borderRadius: "12px", fontSize: "0.78rem", fontWeight: "800", display: "inline-block", marginBottom: "0.6rem", letterSpacing: "0.05em" }}>{rs.label}</span>
+                  <p style={{ margin: "0 0 0.2rem 0", fontSize: "0.8rem", color: "#9CA3AF" }}>{isHome ? "Arsenal" : opponent}</p>
+                  <p style={{ margin: "0 0 0.2rem 0", fontSize: "1.5rem", fontWeight: "900", color: "white", letterSpacing: "0.1em" }}>{r.homeScore} - {r.awayScore}</p>
+                  <p style={{ margin: "0 0 0.3rem 0", fontSize: "0.8rem", color: "#9CA3AF" }}>{isHome ? opponent : "Arsenal"}</p>
+                  <p style={{ margin: "0.4rem 0 0 0", fontSize: "0.7rem", color: "#64748B" }}>
+                    {r.competition.replace("UEFA ", "").replace("Premier League", "PL")} · {new Date(r.kickoffTime).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: "2.5rem" }}>
+        <h3 style={{ fontSize: "1rem", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: "1rem" }}>Upcoming Matches</h3>
+        {loading && <p>Loading fixtures...</p>}
+        {!loading && fixtures.length === 0 && <p style={{ color: "#9CA3AF" }}>No upcoming matches scheduled.</p>}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+          {fixtures.map((match, idx) => {
+            const isHome = match.homeTeam.includes("Arsenal");
+            const opponent = shortName(isHome ? match.awayTeam : match.homeTeam);
+            const highlight = isWithin24Hours(match.kickoffTime);
+            const isNext = idx === 0;
+            const fact = isNext ? getMatchFact(opponent, match.competition) : null;
+            return (
+              <div key={match.matchId} style={{ borderRadius: "12px", padding: "1.1rem 1.5rem", borderLeft: highlight ? "4px solid #F59E0B" : isNext ? "4px solid #60a5fa" : "4px solid #EF0107", background: isNext ? "linear-gradient(135deg, rgba(30,58,95,0.8), rgba(45,95,166,0.4))" : "rgba(255,255,255,0.03)", boxShadow: isNext ? "0 4px 20px rgba(96,165,250,0.1)" : "none", transition: "all 0.2s" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+                  <div style={{ flex: 1 }}>
+                    {isNext && <span style={{ fontSize: "0.68rem", color: "#60a5fa", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: "0.35rem" }}>Next Match</span>}
+                    {highlight && <span style={{ fontSize: "0.68rem", color: "#F59E0B", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: "0.35rem" }}>Today!</span>}
+                    <p style={{ margin: 0, fontWeight: "800", fontSize: "1.05rem", letterSpacing: "0.01em" }}>
+                      Arsenal {isHome ? "vs" : "@"} {opponent}
+                      <span style={{ marginLeft: "0.5rem", fontSize: "0.72rem", color: "#9CA3AF", fontWeight: "400" }}>({isHome ? "Home" : "Away"})</span>
+                    </p>
+                    <p style={{ margin: "0.3rem 0 0 0", fontSize: "0.8rem", color: "#9CA3AF" }}>{match.competition.replace("UEFA ", "")}</p>
+                    {fact && <p style={{ margin: "0.4rem 0 0 0", fontSize: "0.78rem", color: "#60a5fa", fontStyle: "italic", lineHeight: "1.4" }}>💡 {fact}</p>}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <p style={{ margin: 0, fontWeight: "700", fontSize: "0.95rem", color: highlight ? "#F59E0B" : isNext ? "#60a5fa" : "inherit" }}>{formatDate(match.kickoffTime)}</p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.85rem", color: "#9CA3AF" }}>{formatTime(match.kickoffTime)}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <InjuryReport />
+    </section>
+  );
 }

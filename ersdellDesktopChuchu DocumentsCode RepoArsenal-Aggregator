@@ -1,0 +1,10 @@
+[33md7815a7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31mlondon49/main[m[33m)[m fix: red nav active, filter chips no-wrap, deduplication, live commentary
+[33mdf57349[m Fix 404 redirect loop on video page refresh
+[33m9c3f063[m Auto-fetch Arsenal videos from YouTube RSS
+[33mbad81a8[m Fix Video tab navigation, complete ContentFeed
+[33m100c921[m Add VideoFeed route, international sources, live scoreboard
+[33mfe061ed[m Fix mobile standings, saved emoji, filter chips scroll, menu overlay
+[33m7a73574[m Fix mobile: standings, menu, filter chips, title
+[33m65bddc6[m Fix duplicates, nav color, add daily digest workflow
+[33ma35b836[m Revert index.html to fix blank page
+[33m0948ec9[m Fix URL hash redirect
