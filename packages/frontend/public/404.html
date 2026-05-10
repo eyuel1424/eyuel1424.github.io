@@ -7,7 +7,7 @@
     var l = window.location;
     var path = l.pathname;
     if (path.indexOf('/?p=') === -1) {
-      sessionStorage.setItem('redirect', l.href);
+      sessionStorage.setItem('redirect', path + l.search + l.hash);
       l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/');
     }
   </script>
