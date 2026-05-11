@@ -187,8 +187,10 @@ export async function fetchArsenalNews(contentType?: string): Promise<ContentIte
     .filter(({ title, description, source }) => {
       const combined = (title + description).toLowerCase();
       if (source.type === "podcast") return true;
-      // She Kicks and BBC Women cover all WSL — show all their articles
-      if (source.name === "She Kicks" || source.name === "BBC Women's Football") return true;
+      // General women's football sources — show all articles
+      if (source.name === "She Kicks" || source.name === "BBC Women's Football") {
+        return contentType === "women" ? true : combined.includes("arsenal");
+      }
       if (contentType === "women") {
         return combined.includes("arsenal") && WOMEN_KEYWORDS.some(k => combined.includes(k));
       }
