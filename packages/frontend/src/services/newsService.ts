@@ -58,6 +58,8 @@ const RSS_SOURCES = [
   { url: "https://www.marca.com/en/football/arsenal/rss.html", name: "Marca", country: "Spain", type: "news" },
   { url: "https://www.goal.com/pt-br/feeds/news", name: "Goal Brasil", country: "Brazil", type: "news" },
   { url: "https://www.tycsports.com/rss", name: "TyC Sports", country: "Argentina", type: "news" },
+  { url: "https://dailycannon.com/feed", name: "Daily Cannon", country: "England", type: "news" },
+  { url: "https://arsenal-mania.com/feed", name: "Arsenal Mania", country: "England", type: "news" },
   { url: "https://arseblog.com/feed/", name: "Arseblog", country: "England", type: "blog" },
   { url: "https://www.justarsenal.com/feed", name: "Just Arsenal", country: "England", type: "blog" },
   { url: "https://paininthearsenal.com/feed", name: "Pain in the Arsenal", country: "England", type: "blog" },
@@ -75,6 +77,8 @@ const RSS_SOURCES = [
   { url: "https://arseblog.com/category/arsenal-women/feed/", name: "Arseblog Women", country: "England", type: "women" },
   { url: "https://www.justarsenal.com/category/arsenal-women/feed", name: "Just Arsenal Women", country: "England", type: "women" },
   { url: "https://feeds.bbci.co.uk/sport/women-s-football/rss.xml", name: "BBC Women's Football", country: "England", type: "women" },
+  { url: "https://arseblog.news/category/arsenal-women/feed", name: "Arseblog Women News", country: "England", type: "women" },
+  { url: "https://dailycannon.com/feed", name: "Daily Cannon Women", country: "England", type: "women" },
 ];
 
 const TRANSFER_SOURCES = [
